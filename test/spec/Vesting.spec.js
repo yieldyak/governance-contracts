@@ -59,7 +59,7 @@ describe("Vesting", function() {
         expect(newGrant[1]).to.eq(grantAmount)
         expect(newGrant[2]).to.eq(VESTING_DURATION_IN_DAYS)
         expect(newGrant[3]).to.eq(0)
-        expect(await votingPower.balanceOf(alice.address)).to.eq(userVotesBefore.add(grantAmount))
+        expect(await votingPower.balanceOf(alice.address)).to.eq(userVotesBefore.add(grantAmount.mul(1000)))
         totalVested = totalVested.add(grantAmount)
         expect(await yakToken.balanceOf(vesting.address)).to.eq(totalVested)
       })
@@ -81,7 +81,7 @@ describe("Vesting", function() {
             expect(newGrant[1]).to.eq(grantAmount)
             expect(newGrant[2]).to.eq(VESTING_DURATION_IN_DAYS)
             expect(newGrant[3]).to.eq(0)
-            expect(await votingPower.balanceOf(grant.recipient)).to.eq(userVotesBefore.add(grantAmount))
+            expect(await votingPower.balanceOf(grant.recipient)).to.eq(userVotesBefore.add(grantAmount.mul(1000)))
             totalVested = totalVested.add(grantAmount)
         }
         
@@ -154,7 +154,7 @@ describe("Vesting", function() {
         expect(newGrant[1]).to.eq(grantAmount)
         expect(newGrant[2]).to.eq(VESTING_DURATION_IN_DAYS)
         expect(newGrant[3]).to.eq(0)
-        let userVotesAfter = userVotesBefore.add(grantAmount)
+        let userVotesAfter = userVotesBefore.add(grantAmount.mul(1000))
         expect(await votingPower.balanceOf(alice.address)).to.eq(userVotesAfter)
         totalVested = totalVested.add(grantAmount)
         expect(await yakToken.balanceOf(vesting.address)).to.eq(totalVested)
@@ -408,7 +408,7 @@ describe("Vesting", function() {
         let grantAmount = ethers.utils.parseUnits("1000")
         await vesting.addTokenGrant(alice.address, START_TIME, grantAmount, VESTING_DURATION_IN_DAYS)
         const userVotingPowerBefore = await votingPower.balanceOf(alice.address)
-        expect(userVotingPowerBefore).to.eq(grantAmount)
+        expect(userVotingPowerBefore).to.eq(grantAmount.mul(1000))
         let newTime = timestamp + 21600 + 60
         let elapsedTime = newTime - START_TIME
         let claimAmount = grantAmount.div(VESTING_DURATION_IN_SECS).mul(elapsedTime)
@@ -417,7 +417,7 @@ describe("Vesting", function() {
         await ethers.provider.send("evm_setNextBlockTimestamp", [newTime])
         await vesting.claimVestedTokens(alice.address)
         expect(await vesting.claimedBalance(alice.address)).to.eq(claimAmount)
-        expect(await votingPower.balanceOf(alice.address)).to.eq(userVotingPowerBefore.sub(claimAmount))
+        expect(await votingPower.balanceOf(alice.address)).to.eq(userVotingPowerBefore.sub(claimAmount.mul(1000)))
         expect(await yakToken.balanceOf(alice.address)).to.eq(userTokenBalanceBefore.add(claimAmount))
         expect(await yakToken.balanceOf(vesting.address)).to.eq(contractTokenBalanceBefore.sub(claimAmount))
       })
@@ -431,7 +431,7 @@ describe("Vesting", function() {
         let grantAmount = ethers.utils.parseUnits("1000")
         await vesting.addTokenGrant(alice.address, START_TIME, grantAmount, VESTING_DURATION_IN_DAYS)
         const userVotingPowerBefore = await votingPower.balanceOf(alice.address)
-        expect(userVotingPowerBefore).to.eq(grantAmount)
+        expect(userVotingPowerBefore).to.eq(grantAmount.mul(1000))
         let newTime = timestamp + 21600 + 60
         let elapsedTime = newTime - START_TIME
         let claimAmount = grantAmount.div(VESTING_DURATION_IN_SECS).mul(elapsedTime)
@@ -440,7 +440,7 @@ describe("Vesting", function() {
         await ethers.provider.send("evm_setNextBlockTimestamp", [newTime])
         await vesting.claimVestedTokens(alice.address)
         expect(await vesting.claimedBalance(alice.address)).to.eq(claimAmount)
-        expect(await votingPower.balanceOf(alice.address)).to.eq(userVotingPowerBefore.sub(claimAmount))
+        expect(await votingPower.balanceOf(alice.address)).to.eq(userVotingPowerBefore.sub(claimAmount.mul(1000)))
         expect(await yakToken.balanceOf(alice.address)).to.eq(userTokenBalanceBefore.add(claimAmount))
         expect(await yakToken.balanceOf(vesting.address)).to.eq(contractTokenBalanceBefore.sub(claimAmount))
 
@@ -452,7 +452,7 @@ describe("Vesting", function() {
         await ethers.provider.send("evm_setNextBlockTimestamp", [newTime])
         await vesting.claimVestedTokens(alice.address)
         expect(await vesting.claimedBalance(alice.address)).to.eq(claimAmount.add(newClaimAmount))
-        expect(await votingPower.balanceOf(alice.address)).to.eq(userVotingPowerBefore.sub(claimAmount).sub(newClaimAmount))
+        expect(await votingPower.balanceOf(alice.address)).to.eq(userVotingPowerBefore.sub(claimAmount.mul(1000)).sub(newClaimAmount.mul(1000)))
         expect(await yakToken.balanceOf(alice.address)).to.eq(userTokenBalanceBefore.add(newClaimAmount))
         expect(await yakToken.balanceOf(vesting.address)).to.eq(contractTokenBalanceBefore.sub(newClaimAmount))
       })

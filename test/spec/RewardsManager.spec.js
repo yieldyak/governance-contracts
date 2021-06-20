@@ -85,7 +85,7 @@ describe('RewardsManager', () => {
                 const yakBalance = await yakToken.balanceOf(deployer.address)
                 await yakToken.approve(rewardsManager.address, yakBalance)
                 await rewardsManager.deposit(numPools, yakBalance)
-                expect(await votingPower.balanceOf(deployer.address)).to.eq(yakBalance)
+                expect(await votingPower.balanceOf(deployer.address)).to.eq(yakBalance.mul(1000))
             });
             
             it('reverts for a pool w/ voting power w/o a formula', async () => {
@@ -96,7 +96,6 @@ describe('RewardsManager', () => {
 
                 await wavaxToken.deposit({ value: WAVAX_TO_DEPOSIT });
                 await wavaxToken.approve(rewardsManager.address, WAVAX_TO_DEPOSIT)
-                // expect(await votingPower.balanceOf(deployer.address)).to.eq(WAVAX_TO_DEPOSIT)
                 await expect(rewardsManager.deposit(numPools, WAVAX_TO_DEPOSIT)).to.revertedWith("LM::calculateVotingPower: token not supported")
             });
             
@@ -141,7 +140,7 @@ describe('RewardsManager', () => {
                 const yakBalance = await yakToken.balanceOf(deployer.address)
                 await yakToken.approve(rewardsManager.address, yakBalance)
                 await rewardsManager.deposit(numPools, yakBalance)
-                expect(await votingPower.balanceOf(deployer.address)).to.eq(yakBalance)
+                expect(await votingPower.balanceOf(deployer.address)).to.eq(yakBalance.mul(1000))
             });
 
             it('successfully adds a second and third pool', async () => {
@@ -203,7 +202,7 @@ describe('RewardsManager', () => {
                 expect(userInfo.amount).to.eq(yakBalance);
                 expect(userInfo.rewardTokenDebt).to.eq(0);
                 expect(await lockManager.getAmountStaked(deployer.address, yakToken.address)).to.eq(yakBalance);
-                expect(await votingPower.balanceOf(deployer.address)).to.eq(yakBalance);
+                expect(await votingPower.balanceOf(deployer.address)).to.eq(yakBalance.mul(1000));
 
                 const DURATION = 600;
                 await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(startTimestamp) + DURATION]);
@@ -223,7 +222,7 @@ describe('RewardsManager', () => {
                 expect(userInfo.amount).to.eq(yakBalance);
                 expect(userInfo.rewardTokenDebt).to.be.closeTo(amountToClaim, amountToClaim.div(100));
                 expect(await lockManager.getAmountStaked(deployer.address, yakToken.address)).to.eq(yakBalance);
-                expect(await votingPower.balanceOf(deployer.address)).to.eq(yakBalance);
+                expect(await votingPower.balanceOf(deployer.address)).to.eq(yakBalance.mul(1000));
                 expect(await wavaxToken.balanceOf(deployer.address)).to.be.closeTo(deployerWavaxBalanceBefore.add(amountToClaim), amountToClaim.div(100));
             });
         })
@@ -277,7 +276,7 @@ describe('RewardsManager', () => {
                 await rewardsManager.deposit(poolIndex, yakBalance);
                 expect(await yakToken.balanceOf(deployer.address)).to.eq(0);
                 expect(await lockManager.getAmountStaked(deployer.address, yakToken.address)).to.eq(yakBalance);
-                expect(await votingPower.balanceOf(deployer.address)).to.eq(yakBalance);
+                expect(await votingPower.balanceOf(deployer.address)).to.eq(yakBalance.mul(1000));
 
                 const DURATION = 600;
                 await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(startTimestamp) + DURATION]);
@@ -376,7 +375,7 @@ describe('RewardsManager', () => {
                 await yakToken.approve(rewardsManager.address, yakBalance);
                 await rewardsManager.deposit(poolIndex, yakBalance);
                 expect(await lockManager.getAmountStaked(deployer.address, yakToken.address)).to.eq(yakBalance);
-                expect(await votingPower.balanceOf(deployer.address)).to.eq(yakBalance);
+                expect(await votingPower.balanceOf(deployer.address)).to.eq(yakBalance.mul(1000));
                 expect(await yakToken.balanceOf(deployer.address)).to.eq(0);
 
                 const DURATION = 600;
