@@ -28,6 +28,8 @@ Farming and governance are considered together. That is, users do not need to de
 
 Staked YAK tokens contribute to voting power. The vision for the platform is to be fully governed on-chain. Network architecture decisions should be made with this ultimate goal in mind.
 
+**1 YAK = 1,000 Votes**
+
 ## Multi-sig and Snapshot Voting
 
 Initially, and for the goal of growing the network in a flexible way, a multi-sig wallet will be used to execute key governance decisions. DAO members may signal their preferences through Snapshot voting.
@@ -36,9 +38,9 @@ Initially, and for the goal of growing the network in a flexible way, a multi-si
 
 We introduce the concept of Voting Power, which is determined by deposits into the staking contract. The staking contract accepts multiple types of tokens, with different ratios of votes per token. For example:
 
-* $YAK token - 1 vote per token
-* LP token - 10 votes per token
-* YRT token - 50 votes per token
+* $YAK token - 1,000 votes per token
+* LP token - 10,000 votes per token (assuming 1 LP token has 10 YAK underlying)
+* YRT token - 50,000 votes per token (assuming 1 YRT token has 50 YAK underlying)
 
 #### Storage and Implementation
 
@@ -53,3 +55,15 @@ The `LockManager` contract gives other contracts in the ecosystem the ability to
 Conversion ratios are determined by contracts (see `/contracts/formulas/`) which may be updated.
 
 Tokens eligible for voting power may be added and removed through the `TokenRegistry` contract.
+
+# Staking
+
+Staked YAK tokens earn AVAX. The staking contract accepts YAK in multiple forms, with different ratio of earnings per token. For example:
+
+* $YAK token - 1,000 allocation points (voting power + rewards)
+* LP token - 10,000 allocation points (voting power + rewards)
+* YRT token - 0 allocation points (only voting power)
+
+## Autocompounding
+
+The staking contract accepts autocompounding tokens (YRT), which themselves farm the LP token portion of earnings. This gives users the ability to farm, autocompound and get voting power in the network.
