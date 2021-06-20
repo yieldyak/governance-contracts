@@ -4,7 +4,7 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments }) {
     const { deployer, admin } = namedAccounts;
     const votingPower = await deployments.get("VotingPowerPrism")
 
-    log(`12) LockManager`)
+    log(`6) LockManager`)
     // Deploy Vault contract
     const deployResult = await deploy("LockManager", {
         from: deployer,
@@ -21,5 +21,5 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments }) {
     }
 };
 
-module.exports.tags = ["8", "LockManager"];
-module.exports.dependencies = ["7"]
+module.exports.tags = ["6", "LockManager"];
+module.exports.dependencies = ["5"]

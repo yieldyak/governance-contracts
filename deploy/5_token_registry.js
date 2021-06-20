@@ -3,8 +3,10 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments }) {
     const namedAccounts = await getNamedAccounts();
     const { deployer, admin } = namedAccounts;
     const yakToken = await deployments.get("YakToken");
+    const votingPowerImplementation = await deployments.get("VotingPower");
+    const votingPowerPrism = await deployments.get("VotingPowerPrism");
 
-    log(`9) TokenRegistry`)
+    log(`5) TokenRegistry`)
     // Deploy YakFormula contract
     let deployResult = await deploy("YakFormula", {
         from: deployer,
@@ -35,7 +37,17 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments }) {
     } else {
         log(`- Deployment skipped, using previous deployment at: ${deployResult.address}`)
     }
+
+    const tokenRegistry = await deployments.get("TokenRegistry");
+    const votingPower = new ethers.Contract(votingPowerPrism.address, votingPowerImplementation.abi, deployerSigner)
+    
+    if (await votingPower.tokenRegistry() !== tokenRegistry.address) {
+        log(`- Setting token registry to ${tokenRegistry.address}`)
+        await votingPower.setTokenRegistry(tokenRegistry.address);
+    } else {
+        log(`- Skipping setting token registry`)
+    }
 };
 
-module.exports.tags = ["9", "TokenRegistry"];
-module.exports.dependencies = ["8"]
+module.exports.tags = ["5", "TokenRegistry"];
+module.exports.dependencies = ["4"]
