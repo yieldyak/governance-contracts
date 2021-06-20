@@ -8,10 +8,10 @@ import "./lib/SafeERC20.sol";
 import "./lib/ReentrancyGuard.sol";
 
 /**
- * @title RewardsManager
+ * @title MasterYak
  * @dev Controls rewards distribution for network
  */
-contract RewardsManager is ReentrancyGuard {
+contract MasterYak is ReentrancyGuard {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -273,7 +273,7 @@ contract RewardsManager is ReentrancyGuard {
     }
 
     /**
-     * @notice Deposit tokens to RewardsManager for rewards allocation.
+     * @notice Deposit tokens to MasterYak for rewards allocation.
      * @param pid pool id
      * @param amount number of tokens to deposit
      */
@@ -284,7 +284,7 @@ contract RewardsManager is ReentrancyGuard {
     }
 
     /**
-     * @notice Deposit tokens to RewardsManager for rewards allocation, using permit for approval
+     * @notice Deposit tokens to MasterYak for rewards allocation, using permit for approval
      * @dev It is up to the frontend developer to ensure the pool token implements permit - otherwise this will fail
      * @param pid pool id
      * @param amount number of tokens to deposit
@@ -308,7 +308,7 @@ contract RewardsManager is ReentrancyGuard {
     }
 
     /**
-     * @notice Withdraw tokens from RewardsManager, claiming rewards.
+     * @notice Withdraw tokens from MasterYak, claiming rewards.
      * @param pid pool id
      * @param amount number of tokens to withdraw
      */

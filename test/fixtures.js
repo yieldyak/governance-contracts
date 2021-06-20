@@ -125,21 +125,21 @@ const rewardsFixture = deployments.createFixture(async ({deployments, getNamedAc
     const LockManager = await LockManagerFactory.deploy(VotingPower.address, deployer.address)
     await VotingPower.setLockManager(LockManager.address);
     
-    const RewardsManagerFactory = await ethers.getContractFactory("RewardsManager");
-    const RewardsManager = await RewardsManagerFactory.deploy(deployer.address, LockManager.address, WavaxToken.address, WAVAX_REWARDS_START_TIMESTAMP, WAVAX_REWARDS_PER_SECOND)
+    const MasterYakFactory = await ethers.getContractFactory("MasterYak");
+    const MasterYak = await MasterYakFactory.deploy(deployer.address, LockManager.address, WavaxToken.address, WAVAX_REWARDS_START_TIMESTAMP, WAVAX_REWARDS_PER_SECOND)
     const VestingFactory = await ethers.getContractFactory("Vesting");
     const Vesting = await VestingFactory.deploy(deployer.address, YakToken.address, LockManager.address);
-    await LockManager.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("LOCKER_ROLE")), RewardsManager.address)
+    await LockManager.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("LOCKER_ROLE")), MasterYak.address)
     await LockManager.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("LOCKER_ROLE")), Vesting.address)
 
-    await WavaxToken.approve(RewardsManager.address, INITIAL_WAVAX_REWARDS_BALANCE);
+    await WavaxToken.approve(MasterYak.address, INITIAL_WAVAX_REWARDS_BALANCE);
 
     return {
         yakToken: YakToken,
         wavaxToken: WavaxToken,
         votingPower: VotingPower,
         lockManager: LockManager,
-        rewardsManager: RewardsManager,
+        masterYak: MasterYak,
         deployer: deployer,
         alice: alice,
         bob: bob,

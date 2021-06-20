@@ -7,11 +7,11 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments }) {
     const WAVAX_ADDRESS = process.env.WAVAX_ADDRESS
     const lockManager = await deployments.get("LockManager")
 
-    log(`15) RewardsManager`)
-    // Deploy RewardsManager contract
-    deployResult = await deploy("RewardsManager", {
+    log(`15) MasterYak`)
+    // Deploy MasterYak contract
+    deployResult = await deploy("MasterYak", {
         from: deployer,
-        contract: "RewardsManager",
+        contract: "MasterYak",
         gas: 4000000,
         args: [admin, lockManager.address, WAVAX_ADDRESS, WAVAX_REWARDS_START_TIMESTAMP, WAVAX_REWARDS_PER_SECOND],
         skipIfAlreadyDeployed: true
@@ -24,5 +24,5 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments }) {
     }
 };
 
-module.exports.tags = ["10", "RewardsManager"];
+module.exports.tags = ["10", "MasterYak"];
 module.exports.dependencies = ["9"]
