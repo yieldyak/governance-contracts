@@ -3,6 +3,7 @@ const { ethers, deployments, getNamedAccounts, getUnnamedAccounts } = require("h
 const INITIAL_WAVAX_REWARDS_BALANCE = process.env.INITIAL_WAVAX_REWARDS_BALANCE
 const WAVAX_REWARDS_START_TIMESTAMP = process.env.WAVAX_REWARDS_START_TIMESTAMP
 const WAVAX_REWARDS_PER_SECOND = process.env.WAVAX_REWARDS_PER_SECOND
+const DAYS_TO_CLAIM = process.env.DAYS_TO_CLAIM
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
 const tokenFixture = deployments.createFixture(async ({deployments, getNamedAccounts, getUnnamedAccounts, ethers}, options) => {
@@ -76,7 +77,7 @@ const airdropFixture = deployments.createFixture(async ({deployments, getNamedAc
     const YakTokenFactory = await ethers.getContractFactory("YakToken");
     const YakToken = await YakTokenFactory.deploy();
     const ClaimFactory = await ethers.getContractFactory("Claim");
-    const Claim = await ClaimFactory.deploy(YakToken.address);
+    const Claim = await ClaimFactory.deploy(YakToken.address, DAYS_TO_CLAIM);
 
     return {
         yakToken: YakToken,

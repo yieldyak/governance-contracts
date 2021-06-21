@@ -21,9 +21,11 @@ describe("Claim", function() {
         ZERO_ADDRESS = fix.ZERO_ADDRESS
     })
 
-  context("Post-Init", async () => {
+  context("Before deadline", async () => {
     context("addGrant", async () => {
       it("creates valid grant", async function() {
+        // const { timestamp } = ethers.provider.getBlock('latest');
+        // expect(await claim.deadline()).to.be.lessThan(timestamp);
         await yakToken.approve(claim.address, ethers.constants.MaxUint256);
         let grantAmount = ethers.utils.parseUnits("10");
         let contractBalance = await yakToken.balanceOf(claim.address);
@@ -123,6 +125,10 @@ describe("Claim", function() {
         totalGranted = totalGranted.add(grantAmount);
         expect(await claim.getTokenGrant(alice.address)).to.eq(totalGranted);
       });
+
+      it("returns 0 if no grant", async function() {
+        expect(await claim.getTokenGrant(alice.address)).to.eq(0);
+      });
     });
 
     context("claimTokens", async () => {
@@ -165,6 +171,36 @@ describe("Claim", function() {
       });
     });
 
+    context("recover", async () => {
+      it("does not allow owner to recover YAK", async function() {
+        await yakToken.approve(claim.address, ethers.constants.MaxUint256);
+        let grantAmount = ethers.utils.parseUnits("10");
+
+        await claim.addTokenGrant(alice.address, grantAmount);
+        let deployerBalance = await yakToken.balanceOf(deployer.address);
+        expect(await yakToken.balanceOf(claim.address)).to.equal(grantAmount);
+
+        await expect(claim.recoverERC20(yakToken.address, grantAmount)).to.revertedWith("revert Claim::recoverERC20: too early");
+        expect(await yakToken.balanceOf(claim.address)).to.equal(grantAmount);
+        expect(await yakToken.balanceOf(deployer.address)).to.equal(deployerBalance);
+      });
+
+      it("does not allow non-owner to recover YAK", async function() {
+        await yakToken.approve(claim.address, ethers.constants.MaxUint256);
+        let grantAmount = ethers.utils.parseUnits("10");
+
+        await claim.addTokenGrant(alice.address, grantAmount);
+        let deployerBalance = await yakToken.balanceOf(deployer.address);
+        expect(await yakToken.balanceOf(alice.address)).to.equal(0);
+        expect(await yakToken.balanceOf(claim.address)).to.equal(grantAmount);
+
+        await expect(claim.connect(alice).recoverERC20(yakToken.address, grantAmount)).to.revertedWith("revert Claim::recoverERC20: not owner");
+        expect(await yakToken.balanceOf(claim.address)).to.equal(grantAmount);
+        expect(await yakToken.balanceOf(deployer.address)).to.equal(deployerBalance);
+        expect(await yakToken.balanceOf(alice.address)).to.equal(0);
+      });
+    });
+
     context("changeOwner", async () => {
 
       it("allows owner to set new valid owner", async function() {
@@ -184,5 +220,99 @@ describe("Claim", function() {
         expect(await claim.owner()).to.eq(deployer.address)
       })
     })
+  });
+
+  context("After deadline", async () => {
+
+    context("addTokenGrant", async() => {
+        it("reverts if deadline met", async () => {
+          await yakToken.approve(claim.address, ethers.constants.MaxUint256)
+          let grantAmount = ethers.utils.parseUnits("10");
+          let deployerBalance = await yakToken.balanceOf(deployer.address);
+          let deadline = await claim.deadline();
+  
+          await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(deadline)]);
+          await ethers.provider.send("evm_mine");
+  
+          await expect(claim.addTokenGrant(alice.address, grantAmount)).to.revertedWith("Claim::addTokenGrant: too late");
+          expect(await yakToken.balanceOf(deployer.address)).to.eq(deployerBalance);
+          expect(await yakToken.balanceOf(claim.address)).to.eq(0);
+        });
+    })
+
+    context("getTokenGrant", async () => {
+      it("returns 0 if deadline met", async function() {
+        await yakToken.approve(claim.address, ethers.constants.MaxUint256)
+        let grantAmount = ethers.utils.parseUnits("10");
+        let totalGranted = ethers.utils.parseUnits("0");
+        let deadline = await claim.deadline();
+        
+        await claim.addTokenGrant(alice.address, grantAmount);
+        totalGranted = totalGranted.add(grantAmount);
+        expect(await claim.getTokenGrant(alice.address)).to.eq(totalGranted);
+
+        await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(deadline)]);
+        await ethers.provider.send("evm_mine");
+        expect(await claim.getTokenGrant(alice.address)).to.eq(0);
+      });
+    });
+
+    context("claimTokens", async () => {
+      it("does not allow user to claim", async function() {
+        await yakToken.approve(claim.address, ethers.constants.MaxUint256);
+        let grantAmount = ethers.utils.parseUnits("10");
+        let deadline = await claim.deadline();
+
+        await claim.addTokenGrant(alice.address, grantAmount);
+        expect(await yakToken.balanceOf(alice.address)).to.equal(0);
+        expect(await yakToken.balanceOf(claim.address)).to.equal(grantAmount);
+
+        await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(deadline)]);
+        await ethers.provider.send("evm_mine");
+        await expect(claim.connect(alice).claim()).to.revertedWith("revert Claim::claim: availableToClaim is 0");
+        expect(await yakToken.balanceOf(alice.address)).to.equal(0);
+        expect(await yakToken.balanceOf(claim.address)).to.equal(grantAmount);
+      });
+    });
+
+    context("recover", async () => {
+      it("allows owner to recover YAK", async function() {
+        await yakToken.approve(claim.address, ethers.constants.MaxUint256)
+        let grantAmount = ethers.utils.parseUnits("10");
+        let deployerBalance = await yakToken.balanceOf(deployer.address);
+        let deadline = await claim.deadline();
+        
+        await claim.addTokenGrant(alice.address, grantAmount);
+        deployerBalance = deployerBalance.sub(grantAmount);
+        expect(await yakToken.balanceOf(deployer.address)).to.eq(deployerBalance);
+        expect(await yakToken.balanceOf(claim.address)).to.eq(grantAmount);
+
+        await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(deadline)]);
+        await ethers.provider.send("evm_mine");
+        await claim.recoverERC20(yakToken.address, grantAmount);
+        deployerBalance = deployerBalance.add(grantAmount);
+        expect(await yakToken.balanceOf(deployer.address)).to.eq(deployerBalance);
+        expect(await yakToken.balanceOf(claim.address)).to.eq(0);
+      });
+
+      it("does not allow non-owner to recover YAK", async function() {
+        await yakToken.approve(claim.address, ethers.constants.MaxUint256)
+        let grantAmount = ethers.utils.parseUnits("10");
+        let deployerBalance = await yakToken.balanceOf(deployer.address);
+        let deadline = await claim.deadline();
+        
+        await claim.addTokenGrant(alice.address, grantAmount);
+        deployerBalance = deployerBalance.sub(grantAmount);
+        expect(await yakToken.balanceOf(deployer.address)).to.eq(deployerBalance);
+        expect(await yakToken.balanceOf(claim.address)).to.eq(grantAmount);
+
+        await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(deadline)]);
+        await ethers.provider.send("evm_mine");
+        await expect(claim.connect(alice).recoverERC20(yakToken.address, grantAmount)).to.revertedWith("revert Claim::recoverERC20: not owner");
+        expect(await yakToken.balanceOf(deployer.address)).to.eq(deployerBalance);
+        expect(await yakToken.balanceOf(claim.address)).to.eq(grantAmount);
+        expect(await yakToken.balanceOf(alice.address)).to.eq(0);
+      });
+    });
   })
 })
