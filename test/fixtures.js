@@ -50,13 +50,8 @@ const governanceFixture = deployments.createFixture(async ({deployments, getName
     const LockManager = await LockManagerFactory.deploy(VotingPower.address, deployer.address);
     await VotingPower.setLockManager(LockManager.address);
 
-    const VestingFactory = await ethers.getContractFactory("Vesting");
-    const Vesting = await VestingFactory.deploy(deployer.address, YakToken.address, LockManager.address);
-    await LockManager.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("LOCKER_ROLE")), Vesting.address)
-
     return {
         yakToken: YakToken,
-        vesting: Vesting,
         votingPower: VotingPower,
         votingPowerImplementation: VotingPowerImp,
         votingPowerPrism: VotingPowerPrism,
@@ -128,10 +123,11 @@ const rewardsFixture = deployments.createFixture(async ({deployments, getNamedAc
     
     const MasterYakFactory = await ethers.getContractFactory("MasterYak");
     const MasterYak = await MasterYakFactory.deploy(deployer.address, LockManager.address, WavaxToken.address, WAVAX_REWARDS_START_TIMESTAMP, WAVAX_REWARDS_PER_SECOND)
-    const VestingFactory = await ethers.getContractFactory("Vesting");
-    const Vesting = await VestingFactory.deploy(deployer.address, YakToken.address, LockManager.address);
     await LockManager.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("LOCKER_ROLE")), MasterYak.address)
-    await LockManager.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("LOCKER_ROLE")), Vesting.address)
+
+    const MasterVestingFactory = await ethers.getContractFactory("MasterVesting");
+    const MasterVesting = await MasterVestingFactory.deploy(YakToken.address, MasterYak.address, "0", LockManager.address);
+    await LockManager.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("LOCKER_ROLE")), MasterVesting.address)
 
     await WavaxToken.approve(MasterYak.address, INITIAL_WAVAX_REWARDS_BALANCE);
 
@@ -140,6 +136,7 @@ const rewardsFixture = deployments.createFixture(async ({deployments, getNamedAc
         wavaxToken: WavaxToken,
         votingPower: VotingPower,
         lockManager: LockManager,
+        masterVesting: MasterVesting,
         masterYak: MasterYak,
         deployer: deployer,
         alice: alice,

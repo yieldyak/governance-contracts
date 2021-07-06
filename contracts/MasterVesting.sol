@@ -4,14 +4,16 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/ILockManager.sol";
 import "./interfaces/IYakToken.sol";
+import "./interfaces/IERC20.sol";
 import "./interfaces/IVotingPower.sol";
+import "./interfaces/IMasterYak.sol";
 import "./lib/SafeMath.sol";
 
 /**
- * @title Vesting
- * @dev The vesting contract
+ * @title MasterVesting
+ * @dev The vesting contract for MasterYak deposits
  */
-contract Vesting {
+contract MasterVesting {
     using SafeMath for uint256;
 
     /// @notice Grant definition
@@ -28,11 +30,17 @@ contract Vesting {
     /// @notice YAK token
     IYakToken public token;
 
+    /// @notice MasterYak contract
+    IMasterYak public masterYak;
+
+    /// @notice MasterYak Pool Index for token
+    uint256 public pid;
+
     /// @notice LockManager contract
     ILockManager public lockManager;
 
-    /// @notice Mapping of recipient address > token grant
-    mapping (address => Grant) public tokenGrants;
+    /// @notice Token grant
+    Grant public tokenGrant;
 
     /// @notice Current owner of this contract
     address public owner;
@@ -54,15 +62,21 @@ contract Vesting {
      * @param _token Address of YAK token
      */
     constructor(
-        address _owner, 
-        address _token, 
+        address _token,
+        address _masterYak,
+        uint256 _pid,
         address _lockManager
     ) {
-        owner = _owner;
-        emit ChangedOwner(address(0), _owner);
+        owner = msg.sender;
+        emit ChangedOwner(address(0), msg.sender);
 
         require(_token != address(0), "Vest::constructor: must be valid token address");
         token = IYakToken(_token);
+
+        masterYak = IMasterYak(_masterYak);
+        emit ChangedAddress("MASTER_YAK", address(0), _masterYak);
+
+        pid = _pid;
 
         lockManager = ILockManager(_lockManager);
         emit ChangedAddress("LOCK_MANAGER", address(0), _lockManager);
@@ -70,14 +84,10 @@ contract Vesting {
     
     /**
      * @notice Add a new token grant
-     * @param recipient The address that is receiving the grant
-     * @param startTime The unix timestamp when the grant will start
      * @param amount The amount of tokens being granted
      * @param vestingDurationInDays The vesting period in days
      */
     function addTokenGrant(
-        address recipient,
-        uint256 startTime,
         uint256 amount,
         uint256 vestingDurationInDays
     ) 
@@ -86,49 +96,52 @@ contract Vesting {
         require(msg.sender == owner, "Vest::addTokenGrant: not owner");
         require(vestingDurationInDays > 0, "Vest::addTokenGrant: duration must be > 0");
         require(vestingDurationInDays <= 365, "Vest::addTokenGrant: duration more than 1 year");
-        require(tokenGrants[recipient].amount == 0, "Vest::addTokenGrant: grant already exists for account");
+        require(tokenGrant.amount == 0, "Vest::addTokenGrant: grant already exists for account");
         
         uint256 amountVestedPerDay = amount.div(vestingDurationInDays);
         require(amountVestedPerDay > 0, "Vest::addTokenGrant: amountVestedPerDay > 0");
 
         // Transfer the grant tokens under the control of the vesting contract
-        require(token.transferFrom(owner, address(this), amount), "Vest::addTokenGrant: transfer failed");
+        require(token.transferFrom(msg.sender, address(this), amount), "Vest::addTokenGrant: transfer failed");
+        token.approve(address(masterYak), amount);
+        masterYak.deposit(pid, amount);
 
-        uint256 grantStartTime = startTime == 0 ? block.timestamp : startTime;
+        uint256 grantStartTime = block.timestamp;
 
-        Grant memory grant = Grant({
+        tokenGrant = Grant({
             startTime: grantStartTime,
             amount: amount,
             vestingDuration: vestingDurationInDays,
             totalClaimed: 0
         });
-        tokenGrants[recipient] = grant;
-        emit GrantAdded(recipient, amount, grantStartTime, vestingDurationInDays);
-        lockManager.grantVotingPower(recipient, address(token), amount);
+        emit GrantAdded(msg.sender, amount, grantStartTime, vestingDurationInDays);
+        lockManager.grantVotingPower(msg.sender, address(token), amount);
     }
 
     /**
-     * @notice Get token grant for recipient
-     * @param recipient The address that has a grant
+     * @notice Harvest MasterYak rewards and send entire balance to user
+     */
+    function harvest() external {
+        require(msg.sender == owner, "Vest::harvest: not owner");
+        masterYak.deposit(pid, 0);
+        IERC20 rewardToken = IERC20(masterYak.rewardToken());
+        rewardToken.transfer(msg.sender, rewardToken.balanceOf(address(this)));
+    }
+
+    /**
+     * @notice Get token grant
      * @return the grant
      */
-    function getTokenGrant(address recipient) public view returns(Grant memory){
-        return tokenGrants[recipient];
+    function getTokenGrant() public view returns (Grant memory) {
+        return tokenGrant;
     }
 
     /**
-     * @notice Calculate the vested and unclaimed tokens available for `recipient` to claim
+     * @notice Calculate the vested and unclaimed tokens available to claim
      * @dev Due to rounding errors once grant duration is reached, returns the entire left grant amount
-     * @param recipient The address that has a grant
-     * @return The amount recipient can claim
+     * @return The amount available to claim
      */
-    function calculateGrantClaim(address recipient) public view returns (uint256) {
-        Grant storage tokenGrant = tokenGrants[recipient];
-
-        // For grants created with a future start date, that hasn't been reached, return 0, 0
-        if (block.timestamp < tokenGrant.startTime) {
-            return 0;
-        }
+    function calculateGrantClaim() public view returns (uint256) {
 
         // Check cliff was reached
         uint256 elapsedTime = block.timestamp.sub(tokenGrant.startTime);
@@ -148,19 +161,10 @@ contract Vesting {
     }
 
     /**
-     * @notice Calculate the vested (claimed + unclaimed) tokens for `recipient`
-     * @param recipient The address that has a grant
+     * @notice Calculate the vested (claimed + unclaimed) tokens
      * @return Total vested balance (claimed + unclaimed)
      */
-    function vestedBalance(address recipient) external view returns (uint256) {
-        Grant storage tokenGrant = tokenGrants[recipient];
-
-        // For grants created with a future start date, that hasn't been reached, return 0
-        if (block.timestamp < tokenGrant.startTime) {
-            return 0;
-        }
-
-        // Check cliff was reached
+    function vestedBalance() external view returns (uint256) {
         uint256 elapsedTime = block.timestamp.sub(tokenGrant.startTime);
         uint256 elapsedDays = elapsedTime.div(SECONDS_PER_DAY);
         
@@ -176,31 +180,31 @@ contract Vesting {
     }
 
     /**
-     * @notice The balance claimed by `recipient`
-     * @param recipient The address that has a grant
-     * @return the number of claimed tokens by `recipient`
+     * @notice The balance claimed
+     * @return the number of claimed tokens
      */
-    function claimedBalance(address recipient) external view returns (uint256) {
-        Grant storage tokenGrant = tokenGrants[recipient];
+    function claimedBalance() external view returns (uint256) {
         return tokenGrant.totalClaimed;
     }
 
     /**
-     * @notice Allows a grant recipient to claim their vested tokens
+     * @notice Claim vested tokens
      * @dev Errors if no tokens have vested
-     * @dev It is advised recipients check they are entitled to claim via `calculateGrantClaim` before calling this
-     * @param recipient The address that has a grant
+     * @dev It is advised to check `calculateGrantClaim` before calling this
      */
-    function claimVestedTokens(address recipient) external {
-        uint256 amountVested = calculateGrantClaim(recipient);
-        require(amountVested > 0, "Vest::claimVested: amountVested is 0");
-        lockManager.removeVotingPower(recipient, address(token), amountVested);
+    function claimVestedTokens() external {
+        require(msg.sender == owner, "Vest::claimVested: not owner");
 
-        Grant storage tokenGrant = tokenGrants[recipient];
+        uint256 amountVested = calculateGrantClaim();
+        require(amountVested > 0, "Vest::claimVested: amountVested is 0");
+        lockManager.removeVotingPower(msg.sender, address(token), amountVested);
+
         tokenGrant.totalClaimed = tokenGrant.totalClaimed.add(amountVested);
+
+        masterYak.withdraw(pid, amountVested);
         
-        require(token.transfer(recipient, amountVested), "Vest::claimVested: transfer failed");
-        emit GrantTokensClaimed(recipient, amountVested);
+        require(token.transfer(msg.sender, amountVested), "Vest::claimVested: transfer failed");
+        emit GrantTokensClaimed(msg.sender, amountVested);
     }
 
     /**
@@ -221,7 +225,7 @@ contract Vesting {
         external
     {
         require(msg.sender == owner, "Vest::changeOwner: not owner");
-        require(newOwner != address(0) && newOwner != address(this) && newOwner != address(token), "Vest::changeOwner: not valid address");
+        require(newOwner != address(0) && newOwner != address(this) && newOwner != address(token) && newOwner != address(masterYak), "Vest::changeOwner: not valid address");
 
         address oldOwner = owner;
         owner = newOwner;
