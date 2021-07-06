@@ -51,11 +51,10 @@ describe("Claim", function() {
 
       it("creates valid grants from file", async function() {
         await yakToken.approve(claim.address, ethers.constants.MaxUint256)
-        const tokenGrants = JSON.parse(fs.readFileSync(`./grants/${network.name}.json`, 'utf-8'))
+        const tokenGrants = JSON.parse(fs.readFileSync(`./grants/airdrop-${network.name}.json`, 'utf-8'))
         let contractBalance = await yakToken.balanceOf(claim.address)
 
         for(const grant of tokenGrants) {
-            if (grant.class !== "unlocked") continue;
             let grantAmount = ethers.utils.parseUnits(grant.amount);
             await claim.addTokenGrant(grant.recipient, grantAmount)
             expect(await claim.getTokenGrant(grant.recipient)).to.eq(grantAmount)
@@ -276,7 +275,7 @@ describe("Claim", function() {
     });
 
     context("recover", async () => {
-      it("allows owner to recover YAK", async function() {
+      it("allows owner to recover YAK after deadline", async function() {
         await yakToken.approve(claim.address, ethers.constants.MaxUint256)
         let grantAmount = ethers.utils.parseUnits("10");
         let deployerBalance = await yakToken.balanceOf(deployer.address);
@@ -314,5 +313,25 @@ describe("Claim", function() {
         expect(await yakToken.balanceOf(alice.address)).to.eq(0);
       });
     });
+  })
+
+  context("changeOwner", async () => {
+
+    it("allows owner to set new valid owner", async function() {
+      await claim.changeOwner(alice.address)
+      expect(await claim.owner()).to.eq(alice.address)
+    })
+
+    it("does not allow non-owner to change owner", async function() {
+      await expect(claim.connect(alice).changeOwner(bob.address)).to.revertedWith("revert Claim::changeOwner: not owner")
+      expect(await claim.owner()).to.eq(deployer.address)
+    })
+
+    it("does not allow owner to set invalid owner", async function() {
+      await expect(claim.changeOwner(ZERO_ADDRESS)).to.revertedWith("revert Claim::changeOwner: not valid address")
+      await expect(claim.changeOwner(claim.address)).to.revertedWith("revert Claim::changeOwner: not valid address")
+      await expect(claim.changeOwner(yakToken.address)).to.revertedWith("revert Claim::changeOwner: not valid address")
+      expect(await claim.owner()).to.eq(deployer.address)
+    })
   })
 })
