@@ -392,18 +392,6 @@ contract MasterYak is ReentrancyGuard {
         rewardTokensPerSecond = newRewardTokensPerSecond;
         _setRewardsEndTimestamp();
     }
-
-    /**
-     * @notice Set new reward token address
-     * @param newToken address of new reward token
-     * @param newRewardTokensPerSecond new amount of reward token to reward each second
-     */
-    function setRewardToken(address newToken, uint256 newRewardTokensPerSecond) external onlyOwner {
-        emit ChangedAddress("REWARD_TOKEN", address(rewardToken), newToken);
-        rewardToken = IERC20(newToken);
-        rewardTokensPerSecond = newRewardTokensPerSecond;
-        _setRewardsEndTimestamp();
-    }
         
     /**
      * @notice Set new LockManager address

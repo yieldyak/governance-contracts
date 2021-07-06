@@ -3,6 +3,7 @@ const { ethers } = require("hardhat");
 const { rewardsFixture } = require("../fixtures")
 
 const INITIAL_WAVAX_REWARDS_BALANCE = process.env.INITIAL_WAVAX_REWARDS_BALANCE
+const WAVAX_REWARDS_PER_SECOND = process.env.WAVAX_REWARDS_PER_SECOND
 const FACTOR = ethers.BigNumber.from("10").pow("12")
 
 describe('MasterYak', () => {
@@ -33,24 +34,51 @@ describe('MasterYak', () => {
 
     context('before startTimestamp', async () => {
         context('rewardsActive', async () => {
-            it('returns false if rewards period has not started', async () => {
-                // const { timestamp } = ethers.provider.getBlock('latest');
+            it('returns false if rewards have not started', async () => {
+                const { timestamp } = await ethers.provider.getBlock('latest');
+                expect(timestamp).to.gte(startTimestamp);
                 expect(await masterYak.rewardsActive()).to.eq(false)
-                // await masterYak.addRewardsBalance(INITIAL_WAVAX_REWARDS_BALANCE)
-                // expect(await masterYak.rewardsActive()).to.eq(false)
             });
+
+            it('returns true if rewards have started', async () => {
+                const { timestamp } = await ethers.provider.getBlock('latest');
+                await masterYak.addRewardsBalance(INITIAL_WAVAX_REWARDS_BALANCE)
+                expect(timestamp).to.gte(startTimestamp);
+                expect(await masterYak.rewardsActive()).to.eq(true)
+            });
+        });
+    });
+
+    context('admin actions', async () => {
+        it('updates end timestamp when rewards are added', async () => {
+            const { timestamp } = await ethers.provider.getBlock('latest');
+            let endTimestamp = await masterYak.endTimestamp();
+            expect(endTimestamp).to.eq(0);
+            expect(rewardsPerSecond).to.eq(WAVAX_REWARDS_PER_SECOND);
+
+            let addRewardsBalanceTx = await masterYak.addRewardsBalance(INITIAL_WAVAX_REWARDS_BALANCE);
+            let addRewardsBalanceTxReceipt = await addRewardsBalanceTx.wait(0);
+            let addRewardsBalanceTxBlock = await ethers.provider.getBlock(addRewardsBalanceTxReceipt.blockNumber);
+            endTimestamp = await masterYak.endTimestamp();
+            expect(endTimestamp).to.eq(ethers.BigNumber.from(addRewardsBalanceTxBlock.timestamp).add(ethers.BigNumber.from(INITIAL_WAVAX_REWARDS_BALANCE).div(rewardsPerSecond)));
+
+            addRewardsBalanceTx = await masterYak.addRewardsBalance(INITIAL_WAVAX_REWARDS_BALANCE);
+            addRewardsBalanceTxReceipt = await addRewardsBalanceTx.wait(0);
+            addRewardsBalanceTxBlock = await ethers.provider.getBlock(addRewardsBalanceTxReceipt.blockNumber);
+            endTimestamp = await masterYak.endTimestamp();
+            expect(endTimestamp).to.eq(ethers.BigNumber.from(addRewardsBalanceTxBlock.timestamp).add(ethers.BigNumber.from(INITIAL_WAVAX_REWARDS_BALANCE).mul(2).div(rewardsPerSecond)));
         });
     });
 
     context('startTimestamp', async () => {
         context('rewardsActive', async () => {
-            beforeEach(async () => {
-                const { timestamp } = await ethers.provider.getBlock('latest')
-                let numSeconds = startTimestamp.sub(timestamp)
-                for(var i = 0; i < numSeconds.sub(1).toNumber(); i++) {
-                    await ethers.provider.send("evm_mine")
-                }
-            });
+            // beforeEach(async () => {
+            //     const { timestamp } = await ethers.provider.getBlock('latest')
+            //     let numSeconds = startTimestamp.sub(timestamp)
+            //     for(var i = 0; i < numSeconds.sub(1).toNumber(); i++) {
+            //         await ethers.provider.send("evm_mine")
+            //     }
+            // });
 
             it('returns true if rewards period is active', async () => {
                 expect(await masterYak.rewardsActive()).to.eq(false)
@@ -296,6 +324,30 @@ describe('MasterYak', () => {
                 expect(await wavaxToken.balanceOf(deployer.address)).to.be.closeTo(wavaxBalance.add(amountToClaim), amountToClaim.div(100));
             });
 
+            it('does not allow a user to withdraw 0', async () => {
+                const ALLOC_POINTS = "10";
+                await masterYak.add(ALLOC_POINTS, yakToken.address, true, true);
+                const numPools = await masterYak.poolLength();
+                const poolIndex = numPools.sub(1);
+                const yakBalance = await yakToken.balanceOf(deployer.address);
+                const wavaxBalance = await wavaxToken.balanceOf(deployer.address);
+
+                await yakToken.approve(masterYak.address, yakBalance);
+                await masterYak.deposit(poolIndex, yakBalance);
+                expect(await yakToken.balanceOf(deployer.address)).to.eq(0);
+                expect(await lockManager.getAmountStaked(deployer.address, yakToken.address)).to.eq(yakBalance);
+                expect(await votingPower.balanceOf(deployer.address)).to.eq(yakBalance.mul(1000));
+
+                const DURATION = 600;
+                await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(startTimestamp) + DURATION]);
+                await ethers.provider.send("evm_mine");
+                await expect(masterYak.withdraw(poolIndex, 0)).to.revertedWith("revert RM::withdraw: amount must be > 0");
+                expect(await yakToken.balanceOf(deployer.address)).to.eq(0);
+                expect(await lockManager.getAmountStaked(deployer.address, yakToken.address)).to.eq(yakBalance);
+                expect(await votingPower.balanceOf(deployer.address)).to.eq(yakBalance.mul(1000));
+                expect(await wavaxToken.balanceOf(deployer.address)).to.eq(wavaxBalance);
+            });
+
             it('allows a user to withdraw after reward period is over', async () => {
                 const ALLOC_POINTS = "10";
                 await masterYak.add(ALLOC_POINTS, yakToken.address, true, true);
@@ -396,11 +448,31 @@ describe('MasterYak', () => {
                 expect(await wavaxToken.balanceOf(masterYak.address)).to.eq(INITIAL_WAVAX_REWARDS_BALANCE);
             });
 
-            xit('allows a user to emergencyWithdraw all rewards if reward period is over', async () => {
-                const ALLOC_POINTS = "10"
-                await masterYak.add(ALLOC_POINTS, yakToken.address, true, true)
-                // todo
-                expect(1).to.eq(2);
+            it('allows a user to emergencyWithdraw if reward period is over', async () => {
+                const ALLOC_POINTS = "10";
+                await masterYak.add(ALLOC_POINTS, yakToken.address, true, true);
+                const numPools = await masterYak.poolLength();
+                const poolIndex = numPools.sub(1);
+                const yakBalance = await yakToken.balanceOf(deployer.address);
+                const wavaxBalance = await wavaxToken.balanceOf(deployer.address);
+
+                await yakToken.approve(masterYak.address, yakBalance);
+                await masterYak.deposit(poolIndex, yakBalance);
+                expect(await lockManager.getAmountStaked(deployer.address, yakToken.address)).to.eq(yakBalance);
+                expect(await votingPower.balanceOf(deployer.address)).to.eq(yakBalance.mul(1000));
+                expect(await yakToken.balanceOf(deployer.address)).to.eq(0);
+
+                const endTimestamp = await masterYak.endTimestamp();
+                expect(await masterYak.rewardsActive()).to.eq(true);
+                await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(endTimestamp) + 1]);
+                await ethers.provider.send("evm_mine");
+                expect(await masterYak.rewardsActive()).to.eq(false);
+
+                await masterYak.emergencyWithdraw(poolIndex);
+                expect(await lockManager.getAmountStaked(deployer.address, yakToken.address)).to.eq(0);
+                expect(await votingPower.balanceOf(deployer.address)).to.eq(0);
+                expect(await yakToken.balanceOf(deployer.address)).to.eq(yakBalance);
+                expect(await wavaxToken.balanceOf(deployer.address)).to.eq(wavaxBalance);
             });
         });
     });
