@@ -3,7 +3,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deployer } = await getNamedAccounts();
     const yakToken = await deployments.get("YakToken");
   
-    log(`10) Claim Contract`)
+    log(`8) Claim Contract`)
     // Deploy Claim contract
     const deployResult = await deploy("Claim", {
       from: deployer,
@@ -20,5 +20,5 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
   };
 
-module.exports.tags = ["10", "ClaimContract"]
+module.exports.tags = ["8", "ClaimContract"]
 module.exports.dependencies = ["1"]

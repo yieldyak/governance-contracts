@@ -7,7 +7,7 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments }) {
     const WAVAX_ADDRESS = process.env.WAVAX_ADDRESS
     const lockManager = await deployments.get("LockManager")
 
-    log(`8) MasterYak`)
+    log(`7) MasterYak`)
     // Deploy MasterYak contract
     deployResult = await deploy("MasterYak", {
         from: deployer,
@@ -27,5 +27,5 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments }) {
     }
 };
 
-module.exports.tags = ["8", "MasterYak"];
+module.exports.tags = ["7", "MasterYak"];
 module.exports.dependencies = ["6"]

@@ -4,11 +4,11 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const yakToken = await deployments.get("YakToken");
   const lockManager = await deployments.get("LockManager");
 
-  log(`7) Vesting`)
-  // Deploy vesting contract
-  const deployResult = await deploy("Vesting", {
+  log(`9) MasterVesting`)
+  // Deploy MasterVesting contract
+  const deployResult = await deploy("MasterVesting", {
     from: deployer,
-    contract: "Vesting",
+    contract: "MasterVesting",
     gas: 4000000,
     args: [deployer.address, yakToken.address, lockManager.address],
     skipIfAlreadyDeployed: true
@@ -19,7 +19,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     // Set approval for vesting contract to transfer deployer's tokens
     await execute('YakToken', { from: deployer }, 'approve', deployResult.address, ethers.constants.MaxUint256);
-    log(`- Set max approval for vesting contract at ${deployResult.address} for deployer: ${deployer}`)
+    log(`- Set max approval for vesting contract at ${deployResult.address} for deployer: ${deployer}`);
 
     await execute('LockManager', { from: deployer }, 'grantRole', ethers.utils.keccak256(ethers.utils.toUtf8Bytes("LOCKER_ROLE")), deployResult.address);
     log(`- Grant role to ${deployResult.address} for LockManager: ${lockManager.address}`);
@@ -29,5 +29,5 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   }
 };
 
-module.exports.tags = ["7", "Vesting"]
-module.exports.dependencies = ["6"]
+module.exports.tags = ["9", "MasterVesting"]
+module.exports.dependencies = ["6", "7"]

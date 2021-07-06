@@ -5,7 +5,7 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments }) {
     const votingPower = await deployments.get("VotingPowerPrism")
 
     log(`6) LockManager`)
-    // Deploy Vault contract
+    // Deploy LockManager contract
     const deployResult = await deploy("LockManager", {
         from: deployer,
         contract: "LockManager",

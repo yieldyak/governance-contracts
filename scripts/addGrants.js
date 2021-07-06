@@ -1,35 +1,23 @@
-const { readGrantsFromFile } = require('./readGrantsFromFile')
+const { readGrantsFromFile } = require('./readFromFile')
 const { ethers, deployments } = require("hardhat");
 
 const { log } = deployments
-let vestingDurationInDays
 
-async function addGrants(startTime) {
+async function addGrants() {
     const grants = readGrantsFromFile()
-    const owner = await deployments.read('Vesting', 'owner');
+    const owner = await deployments.read('Claim', 'owner');
     for(const grant of grants) {
-        if (grant.class == "team") {
-            vestingDurationInDays = 365
-        } else if (grant.class == "partners") {
-            vestingDurationInDays = 365
-        } else if (grant.class == "unlocked") {
-            vestingDurationInDays = 1
-        } else {
-            continue
-        }
         const grantAmount = ethers.utils.parseUnits(grant.amount);
-        log(`- Creating grant for ${grant.recipient} (class: ${grant.class}) - Total allocation: ${totalTokenAllocation}, Grant amount: ${grantAmount}`)
-        await deployments.execute('Vesting', {from: owner, gasLimit: 6000000 }, 'addTokenGrant', grant.recipient, startTime, grantAmount, vestingDurationInDays);
-        const newGrant = await deployments.read('Vesting', 'getTokenGrant', grant.recipient)
-        log(`- New grant created for ${grant.recipient}:`)
-        log(`  - Start Time: ${newGrant[0]}`)
-        log(`  - Amount: ${newGrant[1]}`)
-        log(`  - Duration: ${newGrant[2]}`)
+        log(`- Creating grant for ${grant.recipient} - Amount: ${grantAmount}`);
+
+        await deployments.execute('Claim', {from: owner, gasLimit: 600000 }, 'addTokenGrant', grant.recipient, grantAmount);
+        const newGrant = await deployments.read('Claim', 'getTokenGrant', grant.recipient);
+        log(`- Grant created for ${grant.recipient}  - Amount: ${newGrant}`);
     }
 }
 
 if (require.main === module) {
-    addGrants(0)
+    addGrants()
 }
 
 module.exports.addGrants = addGrants

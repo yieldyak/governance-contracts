@@ -4,13 +4,13 @@ module.exports = async ({ deployments }) => {
 
     log(`11) Create Grants`)
     // Create grants from file
-    await addGrants(0)
+    await addGrants()
     log(`- Done creating grants`)
 };
 
 module.exports.skip = async function({ deployments }) {
     const { log, read } = deployments;
-    const { readGrantsFromFile } = require("../scripts/readGrantsFromFile")
+    const { readGrantsFromFile } = require("../scripts/readFromFile")
     const claimContract = await deployments.get("Claim");
     const grants = readGrantsFromFile()
     if (grants.length > 0) {
