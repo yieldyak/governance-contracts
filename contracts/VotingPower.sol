@@ -141,7 +141,12 @@ contract VotingPower is PrismProxyImplementation, ReentrancyGuardUpgradeSafe {
 
         app.yakToken.permit(msg.sender, address(this), amount, deadline, v, r, s);
 
-        _stake(msg.sender, address(app.yakToken), amount, amount);
+        address tokenFormulaAddress = app.tokenRegistry.tokenFormulas(address(app.yakToken));
+        require(tokenFormulaAddress != address(0), "VP::stake: token not supported");
+        
+        IVotingPowerFormula tokenFormula = IVotingPowerFormula(address(app.yakToken));
+        uint256 votingPower = tokenFormula.convertTokensToVotingPower(amount);
+        _stake(msg.sender, address(app.yakToken), amount, votingPower);
     }
 
     /**
@@ -154,7 +159,12 @@ contract VotingPower is PrismProxyImplementation, ReentrancyGuardUpgradeSafe {
         require(app.yakToken.balanceOf(msg.sender) >= amount, "VP::stake: not enough tokens");
         require(app.yakToken.allowance(msg.sender, address(this)) >= amount, "VP::stake: must approve tokens before staking");
 
-        _stake(msg.sender, address(app.yakToken), amount, amount);
+        address tokenFormulaAddress = app.tokenRegistry.tokenFormulas(address(app.yakToken));
+        require(tokenFormulaAddress != address(0), "VP::stake: token not supported");
+        
+        IVotingPowerFormula tokenFormula = IVotingPowerFormula(address(app.yakToken));
+        uint256 votingPower = tokenFormula.convertTokensToVotingPower(amount);
+        _stake(msg.sender, address(app.yakToken), amount, votingPower);
     }
 
     /**
