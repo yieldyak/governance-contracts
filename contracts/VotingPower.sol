@@ -150,24 +150,6 @@ contract VotingPower is PrismProxyImplementation, ReentrancyGuardUpgradeSafe {
     }
 
     /**
-     * @notice Stake YAK tokens to unlock voting power for `msg.sender`
-     * @param amount The amount to stake
-     */
-    function stake(uint256 amount) external nonReentrant {
-        AppStorage storage app = VotingPowerStorage.appStorage();
-        require(amount > 0, "VP::stake: cannot stake 0");
-        require(app.yakToken.balanceOf(msg.sender) >= amount, "VP::stake: not enough tokens");
-        require(app.yakToken.allowance(msg.sender, address(this)) >= amount, "VP::stake: must approve tokens before staking");
-
-        address tokenFormulaAddress = app.tokenRegistry.tokenFormulas(address(app.yakToken));
-        require(tokenFormulaAddress != address(0), "VP::stake: token not supported");
-        
-        IVotingPowerFormula tokenFormula = IVotingPowerFormula(address(app.yakToken));
-        uint256 votingPower = tokenFormula.convertTokensToVotingPower(amount);
-        _stake(msg.sender, address(app.yakToken), amount, votingPower);
-    }
-
-    /**
      * @notice Stake LP tokens to unlock voting power for `msg.sender`
      * @param token The token to stake
      * @param amount The amount to stake
@@ -214,16 +196,6 @@ contract VotingPower is PrismProxyImplementation, ReentrancyGuardUpgradeSafe {
     }
 
     /**
-     * @notice Withdraw staked YAK tokens, removing voting power for `msg.sender`
-     * @param amount The amount to withdraw
-     */
-    function withdraw(uint256 amount) external nonReentrant {
-        require(amount > 0, "VP::withdraw: cannot withdraw 0");
-        AppStorage storage app = VotingPowerStorage.appStorage();
-        _withdraw(msg.sender, address(app.yakToken), amount, amount);
-    }
-
-    /**
      * @notice Withdraw staked LP tokens, removing voting power for `msg.sender`
      * @param token The token to withdraw
      * @param amount The amount to withdraw
@@ -236,15 +208,6 @@ contract VotingPower is PrismProxyImplementation, ReentrancyGuardUpgradeSafe {
     }
 
     /**
-     * @notice Get total amount of YAK tokens staked in contract by `staker`
-     * @param staker The user with staked YAK
-     * @return total YAK amount staked
-     */
-    function getYAKAmountStaked(address staker) public view returns (uint256) {
-        return getYAKStake(staker).amount;
-    }
-
-    /**
      * @notice Get total amount of tokens staked in contract by `staker`
      * @param staker The user with staked tokens
      * @param stakedToken The staked token
@@ -252,16 +215,6 @@ contract VotingPower is PrismProxyImplementation, ReentrancyGuardUpgradeSafe {
      */
     function getAmountStaked(address staker, address stakedToken) public view returns (uint256) {
         return getStake(staker, stakedToken).amount;
-    }
-
-    /**
-     * @notice Get staked amount and voting power from YAK tokens staked in contract by `staker`
-     * @param staker The user with staked YAK
-     * @return total YAK staked
-     */
-    function getYAKStake(address staker) public view returns (Stake memory) {
-        AppStorage storage app = VotingPowerStorage.appStorage();
-        return getStake(staker, address(app.yakToken));
     }
 
     /**

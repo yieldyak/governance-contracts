@@ -42,7 +42,9 @@ describe('MasterYak', () => {
 
             it('returns true if rewards have started', async () => {
                 const { timestamp } = await ethers.provider.getBlock('latest');
+                const ALLOC_POINTS = "10"
                 await masterYak.addRewardsBalance(INITIAL_WAVAX_REWARDS_BALANCE)
+                await masterYak.add(ALLOC_POINTS, yakToken.address, true, true)
                 expect(timestamp).to.gte(startTimestamp);
                 expect(await masterYak.rewardsActive()).to.eq(true)
             });
@@ -51,22 +53,21 @@ describe('MasterYak', () => {
 
     context('admin actions', async () => {
         it('updates end timestamp when rewards are added', async () => {
-            const { timestamp } = await ethers.provider.getBlock('latest');
             let endTimestamp = await masterYak.endTimestamp();
             expect(endTimestamp).to.eq(0);
             expect(rewardsPerSecond).to.eq(WAVAX_REWARDS_PER_SECOND);
 
-            let addRewardsBalanceTx = await masterYak.addRewardsBalance(INITIAL_WAVAX_REWARDS_BALANCE);
+            let addRewardsBalanceTx = await masterYak.addRewardsBalance(ethers.BigNumber.from(INITIAL_WAVAX_REWARDS_BALANCE).div("2"));
             let addRewardsBalanceTxReceipt = await addRewardsBalanceTx.wait(0);
             let addRewardsBalanceTxBlock = await ethers.provider.getBlock(addRewardsBalanceTxReceipt.blockNumber);
             endTimestamp = await masterYak.endTimestamp();
-            expect(endTimestamp).to.eq(ethers.BigNumber.from(addRewardsBalanceTxBlock.timestamp).add(ethers.BigNumber.from(INITIAL_WAVAX_REWARDS_BALANCE).div(rewardsPerSecond)));
+            expect(endTimestamp).to.eq(ethers.BigNumber.from(addRewardsBalanceTxBlock.timestamp).add(ethers.BigNumber.from(INITIAL_WAVAX_REWARDS_BALANCE).div("2").div(rewardsPerSecond)));
 
-            addRewardsBalanceTx = await masterYak.addRewardsBalance(INITIAL_WAVAX_REWARDS_BALANCE);
+            addRewardsBalanceTx = await masterYak.addRewardsBalance(ethers.BigNumber.from(INITIAL_WAVAX_REWARDS_BALANCE).div("2"));
             addRewardsBalanceTxReceipt = await addRewardsBalanceTx.wait(0);
             addRewardsBalanceTxBlock = await ethers.provider.getBlock(addRewardsBalanceTxReceipt.blockNumber);
             endTimestamp = await masterYak.endTimestamp();
-            expect(endTimestamp).to.eq(ethers.BigNumber.from(addRewardsBalanceTxBlock.timestamp).add(ethers.BigNumber.from(INITIAL_WAVAX_REWARDS_BALANCE).mul(2).div(rewardsPerSecond)));
+            expect(endTimestamp).to.eq(ethers.BigNumber.from(addRewardsBalanceTxBlock.timestamp).add(ethers.BigNumber.from(INITIAL_WAVAX_REWARDS_BALANCE).div("2").mul(2).div(rewardsPerSecond)));
         });
     });
 

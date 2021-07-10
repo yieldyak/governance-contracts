@@ -35,29 +35,14 @@ describe("VotingPower", function() {
         ZERO_ADDRESS = fix.ZERO_ADDRESS
     })
 
-    context("Pre-Init", async () => {
-        context("yakToken", async () => {
-            xit("reverts", async function() {
-                await expect(votingPower.yakToken()).to.reverted
-            })
-        })
-    })
-
     context("Post-Init", async () => {
-        // beforeEach(async () => {
-        //     await votingPowerPrism.setPendingProxyImplementation(votingPowerImplementation.address)
-        //     await votingPowerImplementation.become(votingPowerPrism.address)
-        //     await votingPower.initialize(yakToken.address)
-        // })
         
-        context("yakToken", async () => {
+        context("setup", async () => {
             it("returns the current YAK token address", async function() {
                 expect(await votingPower.yakToken()).to.eq(yakToken.address)
                 expect(await votingPowerImplementation.yakToken()).to.eq(ZERO_ADDRESS)
             })
-        })
 
-        context("decimals", async () => {
             it("returns the correct decimals for voting power", async function() {
                 expect(await votingPower.decimals()).to.eq(18)
             })
@@ -67,29 +52,29 @@ describe("VotingPower", function() {
             it("allows a valid stake", async function() {
                 const userBalanceBefore = await yakToken.balanceOf(deployer.address)
                 const contractBalanceBefore = await yakToken.balanceOf(votingPower.address)
-                const totalYakStakedBefore = await votingPower.getYAKAmountStaked(deployer.address)
+                const totalYakStakedBefore = await votingPower.getAmountStaked(deployer.address, yakToken.address)
                 const userVotesBefore = await votingPower.balanceOf(deployer.address)
                 const amountToStake = ethers.utils.parseUnits("100");
                 await yakToken.approve(votingPower.address, amountToStake)
-                await votingPower['stake(uint256)'](amountToStake)
+                await votingPower.stake(yakToken.address, amountToStake);
                 expect(await yakToken.balanceOf(deployer.address)).to.eq(userBalanceBefore.sub(amountToStake))
                 expect(await yakToken.balanceOf(votingPower.address)).to.eq(contractBalanceBefore.add(amountToStake))
-                expect(await votingPower.getYAKAmountStaked(deployer.address)).to.eq(totalYakStakedBefore.add(amountToStake))
+                expect(await votingPower.getAmountStaked(deployer.address, yakToken.address)).to.eq(totalYakStakedBefore.add(amountToStake))
                 expect(await votingPower.balanceOf(deployer.address)).to.eq(userVotesBefore.add(amountToStake.mul(1000)))
             });
 
             it("does not allow a zero stake amount", async function() {
-                await expect(votingPower['stake(uint256)'](0)).to.revertedWith("revert VP::stake: cannot stake 0")
+                await expect(votingPower.stake(yakToken.address, 0)).to.revertedWith("revert VP::stake: cannot stake 0")
             });
 
             it("does not allow a user to stake more tokens than they have", async function() {
                 const amountToStake = ethers.utils.parseUnits("100");
-                await expect(votingPower.connect(alice)['stake(uint256)'](amountToStake)).to.revertedWith("revert VP::stake: not enough tokens")
+                await expect(votingPower.connect(alice).stake(yakToken.address, amountToStake)).to.revertedWith("revert VP::stake: not enough tokens")
             });
 
             it("does not allow a user to stake before approval", async function() {
                 const amountToStake = ethers.utils.parseUnits("100");
-                await expect(votingPower['stake(uint256)'](amountToStake)).to.revertedWith("revert VP::stake: must approve tokens before staking")
+                await expect(votingPower.stake(yakToken.address, amountToStake)).to.revertedWith("revert VP::stake: must approve tokens before staking")
             });
         });
 
@@ -98,7 +83,7 @@ describe("VotingPower", function() {
                 const value = ethers.utils.parseUnits("100");
                 const userBalanceBefore = await yakToken.balanceOf(deployer.address)
                 const contractBalanceBefore = await yakToken.balanceOf(votingPower.address)
-                const totalYakStakedBefore = await votingPower.getYAKAmountStaked(deployer.address)
+                const totalYakStakedBefore = await votingPower.getAmountStaked(deployer.address, yakToken.address)
                 const userVotesBefore = await votingPower.balanceOf(deployer.address)
                 
                 const domainSeparator = ethers.utils.keccak256(
@@ -108,7 +93,6 @@ describe("VotingPower", function() {
                     )
                 )
           
-                  
                 const nonce = await yakToken.nonces(deployer.address)
                 const deadline = ethers.constants.MaxUint256
                 const digest = ethers.utils.keccak256(
@@ -132,7 +116,7 @@ describe("VotingPower", function() {
                 await votingPower.stakeWithPermit(value, deadline, v, r, s)
                 expect(await yakToken.balanceOf(deployer.address)).to.eq(userBalanceBefore.sub(value))
                 expect(await yakToken.balanceOf(votingPower.address)).to.eq(contractBalanceBefore.add(value))
-                expect(await votingPower.getYAKAmountStaked(deployer.address)).to.eq(totalYakStakedBefore.add(value))
+                expect(await votingPower.getAmountStaked(deployer.address, yakToken.address)).to.eq(totalYakStakedBefore.add(value))
                 expect(await votingPower.balanceOf(deployer.address)).to.eq(userVotesBefore.add(value.mul(1000)))
             })
 
@@ -240,32 +224,32 @@ describe("VotingPower", function() {
             it("allows a valid withdrawal", async function() {
                 const userBalanceBefore = await yakToken.balanceOf(deployer.address)
                 const contractBalanceBefore = await yakToken.balanceOf(votingPower.address)
-                const totalYakStakedBefore = await votingPower.getYAKAmountStaked(deployer.address)
+                const totalYakStakedBefore = await votingPower.getAmountStaked(deployer.address, yakToken.address)
                 const userVotesBefore = await votingPower.balanceOf(deployer.address)
                 const amountToStake = ethers.utils.parseUnits("100");
                 await yakToken.approve(votingPower.address, amountToStake)
-                await votingPower['stake(uint256)'](amountToStake)
+                await votingPower.stake(yakToken.address, amountToStake)
                 expect(await yakToken.balanceOf(deployer.address)).to.eq(userBalanceBefore.sub(amountToStake))
                 expect(await yakToken.balanceOf(votingPower.address)).to.eq(contractBalanceBefore.add(amountToStake))
-                expect(await votingPower.getYAKAmountStaked(deployer.address)).to.eq(totalYakStakedBefore.add(amountToStake))
+                expect(await votingPower.getAmountStaked(deployer.address, yakToken.address)).to.eq(totalYakStakedBefore.add(amountToStake))
                 const userVotesAfter = await votingPower.balanceOf(deployer.address)
                 expect(userVotesAfter).to.eq(userVotesBefore.add(amountToStake.mul(1000)))
-                await votingPower['withdraw(uint256)'](amountToStake)
+                await votingPower.withdraw(yakToken.address, amountToStake)
                 expect(await yakToken.balanceOf(deployer.address)).to.eq(userBalanceBefore)
                 expect(await yakToken.balanceOf(votingPower.address)).to.eq(contractBalanceBefore)
-                expect(await votingPower.getYAKAmountStaked(deployer.address)).to.eq(totalYakStakedBefore)
+                expect(await votingPower.getAmountStaked(deployer.address, yakToken.address)).to.eq(totalYakStakedBefore)
                 expect(await votingPower.balanceOf(deployer.address)).to.eq(userVotesBefore)
             })
 
             it("does not allow a zero withdrawal amount", async function() {
-                await expect(votingPower['withdraw(uint256)'](0)).to.revertedWith("revert VP::withdraw: cannot withdraw 0")
+                await expect(votingPower.withdraw(yakToken.address, 0)).to.revertedWith("revert VP::withdraw: cannot withdraw 0")
             })
 
             it("does not allow a user to withdraw more than their current stake", async function() {
                 const amountToStake = ethers.utils.parseUnits("100");
                 await yakToken.approve(votingPower.address, amountToStake)
-                await votingPower['stake(uint256)'](amountToStake)
-                await expect(votingPower['withdraw(uint256)'](amountToStake.add(1))).to.revertedWith("revert VP::_withdraw: not enough tokens staked")
+                await votingPower.stake(yakToken.address, amountToStake)
+                await expect(votingPower.withdraw(yakToken.address, amountToStake.add(1))).to.revertedWith("revert VP::_withdraw: not enough tokens staked")
             })
         })
     })
