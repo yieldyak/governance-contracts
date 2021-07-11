@@ -313,7 +313,7 @@ contract MasterYak is ReentrancyGuard {
      * @param amount number of tokens to withdraw
      */
     function withdraw(uint256 pid, uint256 amount) external nonReentrant {
-        require(amount > 0, "RM::withdraw: amount must be > 0");
+        require(amount > 0, "MasterYak::withdraw: amount must be > 0");
         PoolInfo storage pool = poolInfo[pid];
         UserInfo storage user = userInfo[pid][msg.sender];
         _withdraw(pid, amount, pool, user);

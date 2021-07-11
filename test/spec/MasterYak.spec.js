@@ -73,14 +73,6 @@ describe('MasterYak', () => {
 
     context('startTimestamp', async () => {
         context('rewardsActive', async () => {
-            // beforeEach(async () => {
-            //     const { timestamp } = await ethers.provider.getBlock('latest')
-            //     let numSeconds = startTimestamp.sub(timestamp)
-            //     for(var i = 0; i < numSeconds.sub(1).toNumber(); i++) {
-            //         await ethers.provider.send("evm_mine")
-            //     }
-            // });
-
             it('returns true if rewards period is active', async () => {
                 expect(await masterYak.rewardsActive()).to.eq(false)
                 await masterYak.addRewardsBalance(INITIAL_WAVAX_REWARDS_BALANCE)
