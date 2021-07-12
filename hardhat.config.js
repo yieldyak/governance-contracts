@@ -11,11 +11,13 @@ const AVALANCHE_FUJI_URL = process.env.AVALANCHE_FUJI_URL;
 const FORK_URL = process.env.FORK_URL
 const FORK_BLOCK_NUMBER = process.env.FORK_BLOCK_NUMBER
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY
-const STAKER_PRIVATE_KEY = process.env.STAKER_PRIVATE_KEY
+const TOKEN_DEPLOYER_PRIVATE_KEY = process.env.TOKEN_DEPLOYER_PRIVATE_KEY
+const ADMIN_ADDRESS = process.env.ADMIN_ADDRESS;
 
 // Default Hardhat network config
 let hardhatConfig = {
   chainId: 43114,
+  gasPrice: 225000000000,
   live: false,
   saveDeployments: true
 }
@@ -49,9 +51,9 @@ if (DEPLOYER_PRIVATE_KEY && DEPLOYER_PRIVATE_KEY.length > 0) {
   fujiConfig.accounts = [DEPLOYER_PRIVATE_KEY]
   mainnetConfig.accounts = [DEPLOYER_PRIVATE_KEY]
 
-  if (STAKER_PRIVATE_KEY && STAKER_PRIVATE_KEY.length > 0) {
-    fujiConfig.accounts.push(STAKER_PRIVATE_KEY)
-    mainnetConfig.accounts.push(STAKER_PRIVATE_KEY)
+  if (TOKEN_DEPLOYER_PRIVATE_KEY && TOKEN_DEPLOYER_PRIVATE_KEY.length > 0) {
+    fujiConfig.accounts.push(TOKEN_DEPLOYER_PRIVATE_KEY)
+    mainnetConfig.accounts.push(TOKEN_DEPLOYER_PRIVATE_KEY)
   }
 }
 
@@ -81,11 +83,14 @@ module.exports = {
     deployer: {
       default: 0
     },
-    staker: {
-      default: 2
+    tokenDeployer: {
+      default: 1
     },
     admin: {
-      default: 3
+      default: 3,
+      "hardhat": ADMIN_ADDRESS,
+      "fuji": ADMIN_ADDRESS,
+      "mainnet": ADMIN_ADDRESS
     }
   },
   paths: {

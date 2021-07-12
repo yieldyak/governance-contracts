@@ -1,11 +1,16 @@
-module.exports = async ({ deployments }) => {
-    const { log } = deployments;
+module.exports = async ({ deployments, getNamedAccounts }) => {
+    const { log, read } = deployments;
+    const namedAccounts = await getNamedAccounts();
+    const { deployer } = namedAccounts;
     const { addGrants } = require("../scripts/addGrants")
 
     log(`11) Create Grants`)
     // Create grants from file
     await addGrants()
     log(`- Done creating grants`)
+
+    log(`Deployer Balance: ${ethers.utils.formatUnits(await ethers.provider.getBalance(deployer))} AVAX`);
+    log(`Deployer Balance: ${ethers.utils.formatUnits(await read('YakToken', 'balanceOf', deployer))} YAK`);
 };
 
 module.exports.skip = async function({ deployments }) {
@@ -30,4 +35,4 @@ module.exports.skip = async function({ deployments }) {
 }
 
 module.exports.tags = ["11", "CreateGrants"]
-module.exports.dependencies = ["10", "7"]
+module.exports.dependencies = ["10"]

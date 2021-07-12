@@ -1,8 +1,12 @@
 module.exports = async ({ getNamedAccounts, deployments }) => {
-  const { deploy, execute, log } = deployments;
+  const { deploy, execute, read, log } = deployments;
   const { deployer } = await getNamedAccounts();
   const yakToken = await deployments.get("YakToken");
   const lockManager = await deployments.get("LockManager");
+  const masterYak = await deployments.get("MasterYak");
+
+  const TEAM_VESTING_TOKENS = ethers.utils.parseUnits("1500");
+  const TEAM_VESTING_DAYS = 365;
 
   log(`9) MasterVesting`)
   // Deploy MasterVesting contract
@@ -10,7 +14,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     from: deployer,
     contract: "MasterVesting",
     gas: 4000000,
-    args: [deployer.address, yakToken.address, lockManager.address],
+    args: [yakToken.address, masterYak.address, "0", lockManager.address],
     skipIfAlreadyDeployed: true
   });
 
@@ -21,13 +25,23 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     await execute('YakToken', { from: deployer }, 'approve', deployResult.address, ethers.constants.MaxUint256);
     log(`- Set max approval for vesting contract at ${deployResult.address} for deployer: ${deployer}`);
 
+    // Set lock manager role
     await execute('LockManager', { from: deployer }, 'grantRole', ethers.utils.keccak256(ethers.utils.toUtf8Bytes("LOCKER_ROLE")), deployResult.address);
     log(`- Grant role to ${deployResult.address} for LockManager: ${lockManager.address}`);
 
+    // Vest team tokens
+    await execute('MasterVesting', { from: deployer }, 'addTokenGrant', TEAM_VESTING_TOKENS, TEAM_VESTING_DAYS);
+    log(`- Vest ${ethers.utils.formatUnits(TEAM_VESTING_TOKENS)} YAK for ${TEAM_VESTING_DAYS} days`)
+
+    let userInfo = await read('MasterYak', 'userInfo', "0", deployResult.address);
+    log(`  Balance in MasterYak: ${ethers.utils.formatUnits(userInfo.amount)} YAK`);
+
+    log(`Deployer Balance: ${ethers.utils.formatUnits(await ethers.provider.getBalance(deployer))} AVAX`);
+    log(`Deployer Balance: ${ethers.utils.formatUnits(await read('YakToken', 'balanceOf', deployer))} YAK`);
   } else {
     log(`- Deployment skipped, using previous deployment at: ${deployResult.address}`)
   }
 };
 
-module.exports.tags = ["9", "MasterVesting"]
-module.exports.dependencies = ["6", "7"]
+module.exports.tags = ["10", "MasterVesting"]
+module.exports.dependencies = ["9"]

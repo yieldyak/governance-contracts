@@ -24,6 +24,8 @@ module.exports = async function ({ ethers, deployments, getNamedAccounts }) {
     await execute('VotingPowerPrism', {from: deployer }, 'setPendingProxyAdmin', admin);
     log(`- Set pending voting power admin for prism at ${votingPowerPrism.address} to ${admin}`);
     log(`- ${admin} can now call 'acceptAdmin' via the voting power prism proxy to become the admin`)
+    
+    log(`Deployer Balance: ${ethers.utils.formatUnits(await ethers.provider.getBalance(deployer))} AVAX`);
 };
 
 module.exports.skip = async function({ ethers, deployments, getNamedAccounts }) {
