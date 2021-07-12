@@ -334,7 +334,7 @@ describe('MasterYak', () => {
                 const DURATION = 600;
                 await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(startTimestamp) + DURATION]);
                 await ethers.provider.send("evm_mine");
-                await expect(masterYak.withdraw(poolIndex, 0)).to.revertedWith("revert RM::withdraw: amount must be > 0");
+                await expect(masterYak.withdraw(poolIndex, 0)).to.revertedWith("revert MasterYak::withdraw: amount must be > 0");
                 expect(await yakToken.balanceOf(deployer.address)).to.eq(0);
                 expect(await lockManager.getAmountStaked(deployer.address, yakToken.address)).to.eq(yakBalance);
                 expect(await votingPower.balanceOf(deployer.address)).to.eq(yakBalance.mul(1000));
@@ -372,6 +372,103 @@ describe('MasterYak', () => {
                 expect(await wavaxToken.balanceOf(deployer.address)).to.be.closeTo(wavaxBalance.add(amountToClaim), amountToClaim.div(100));
                 expect(await wavaxToken.balanceOf(masterYak.address)).to.be.closeTo(ethers.utils.parseUnits("0"), amountToClaim.div(100));
             });
+        });
+
+        context('setRewardsPerSecond', async () => {
+            beforeEach(async () => {
+                const ALLOC_POINTS = "10"
+                await masterYak.add(ALLOC_POINTS, yakToken.address, false, true);
+            });
+
+            it('allows a user to deposit before rewards are added', async () => {
+                const numPools = await masterYak.poolLength();
+                const poolIndex = numPools.sub(1);
+                const yakBalance = await yakToken.balanceOf(deployer.address);
+
+                const deployerWavaxBalanceBefore = await wavaxToken.balanceOf(deployer.address);
+                await yakToken.approve(masterYak.address, yakBalance);
+                await masterYak.deposit(poolIndex, yakBalance);
+                const { timestamp } = await ethers.provider.getBlock('latest');
+                
+                let userInfo = await masterYak.userInfo(poolIndex, deployer.address)
+                let poolInfo = await masterYak.poolInfo(poolIndex);
+
+                expect(userInfo.amount).to.eq(yakBalance);
+                expect(userInfo.rewardTokenDebt).to.eq(0);
+                expect(poolInfo.token).to.eq(yakToken.address);
+                expect(poolInfo.allocPoint).to.eq(10);
+                expect(poolInfo.lastRewardTimestamp).to.eq(timestamp);
+                expect(poolInfo.accRewardsPerShare).to.eq(0);
+                expect(poolInfo.totalStaked).to.eq(yakBalance);
+                expect(poolInfo.vpForDeposit).to.eq(true);
+
+                const DURATION = 600;
+                await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(poolInfo.lastRewardTimestamp) + DURATION]);
+                await ethers.provider.send("evm_mine");
+
+                poolInfo = await masterYak.poolInfo(poolIndex);
+                expect(poolInfo.lastRewardTimestamp).to.eq(timestamp);
+                expect(poolInfo.accRewardsPerShare).to.eq(0);
+                expect(await masterYak.pendingRewardTokens("0", deployer.address)).to.eq(0);
+            })
+
+            it('accumulates expected rewards after rewards are added', async () => {
+                const numPools = await masterYak.poolLength();
+                const poolIndex = numPools.sub(1);
+                const yakBalance = await yakToken.balanceOf(deployer.address);
+
+                const deployerWavaxBalanceBefore = await wavaxToken.balanceOf(deployer.address);
+                await yakToken.approve(masterYak.address, yakBalance);
+                await masterYak.deposit(poolIndex, yakBalance);
+                const { timestamp } = await ethers.provider.getBlock('latest');
+                
+                let poolInfo = await masterYak.poolInfo(poolIndex);
+
+                const DURATION = 600;
+                await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(poolInfo.lastRewardTimestamp) + DURATION]);
+                await masterYak.updatePool(poolIndex);
+                await masterYak.addRewardsBalance(INITIAL_WAVAX_REWARDS_BALANCE);
+
+                poolInfo = await masterYak.poolInfo(poolIndex);
+                expect(await wavaxToken.balanceOf(deployer.address)).to.eq(deployerWavaxBalanceBefore.sub(INITIAL_WAVAX_REWARDS_BALANCE));
+                expect(poolInfo.lastRewardTimestamp).to.eq(timestamp + DURATION);
+
+                await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(poolInfo.lastRewardTimestamp) + DURATION]);
+                await ethers.provider.send("evm_mine");
+
+                expect(poolInfo.accRewardsPerShare).to.eq(0);
+                expect(await masterYak.pendingRewardTokens("0", deployer.address)).to.eq(rewardsPerSecond.mul(DURATION));
+            })
+
+            it('accumulates expected rewards after rewards per second are changed', async () => {
+                const numPools = await masterYak.poolLength();
+                const poolIndex = numPools.sub(1);
+                const yakBalance = await yakToken.balanceOf(deployer.address);
+
+                await yakToken.approve(masterYak.address, yakBalance);
+                await masterYak.addRewardsBalance(INITIAL_WAVAX_REWARDS_BALANCE);
+                await masterYak.deposit(poolIndex, yakBalance);
+                const { timestamp } = await ethers.provider.getBlock('latest');
+                
+                let poolInfo = await masterYak.poolInfo(poolIndex);
+                let newRewardsPerSecond = rewardsPerSecond.div("10");
+
+                const DURATION = 600;
+                await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(poolInfo.lastRewardTimestamp) + DURATION]);
+                await masterYak.updatePool(poolIndex);
+                // expect(await masterYak.pendingRewardTokens("0", deployer.address)).to.eq(rewardsPerSecond.mul(DURATION));
+
+                await masterYak.setRewardsPerSecond(newRewardsPerSecond);
+                expect(await masterYak.rewardTokensPerSecond()).to.eq(newRewardsPerSecond);
+
+                poolInfo = await masterYak.poolInfo(poolIndex);
+                expect(poolInfo.lastRewardTimestamp).to.eq(timestamp + DURATION);
+
+                await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(poolInfo.lastRewardTimestamp) + DURATION]);
+                await ethers.provider.send("evm_mine");
+
+                expect(await masterYak.pendingRewardTokens("0", deployer.address)).to.eq(rewardsPerSecond.mul(DURATION).add(newRewardsPerSecond.mul(DURATION)));
+            })
         });
 
         context('emergencyWithdraw', async () => {

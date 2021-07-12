@@ -2,6 +2,7 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { rewardsFixture } = require("../fixtures")
 
+const MASTER_YAK_ALLOC_POINTS = process.env.MASTER_YAK_ALLOC_POINTS
 const INITIAL_WAVAX_REWARDS_BALANCE = process.env.INITIAL_WAVAX_REWARDS_BALANCE
 
 describe("MasterVesting", function() {
@@ -29,8 +30,7 @@ describe("MasterVesting", function() {
         bob = fix.bob
         ZERO_ADDRESS = fix.ZERO_ADDRESS
         await masterYak.addRewardsBalance(INITIAL_WAVAX_REWARDS_BALANCE)
-        const ALLOC_POINTS = "10"
-        await masterYak.add(ALLOC_POINTS, yakToken.address, false, true)
+        await masterYak.add(MASTER_YAK_ALLOC_POINTS, yakToken.address, false, true)
         expect(await masterYak.rewardsActive()).to.eq(true)
     })
 

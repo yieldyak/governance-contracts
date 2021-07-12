@@ -19,7 +19,7 @@ const tokenFixture = deployments.createFixture(async ({deployments, getNamedAcco
     const alice = accounts[5]
     const bob = accounts[6]
     const YakTokenFactory = await ethers.getContractFactory("YakToken");
-    const YakToken = await YakTokenFactory.deploy();
+    const YakToken = await YakTokenFactory.deploy(deployer.address);
     return {
         yakToken: YakToken,
         deployer: deployer,
@@ -32,11 +32,12 @@ const tokenFixture = deployments.createFixture(async ({deployments, getNamedAcco
 const governanceFixture = deployments.createFixture(async ({deployments, getNamedAccounts, getUnnamedAccounts, ethers}, options) => {
     const accounts = await ethers.getSigners();
     const deployer = accounts[0];
+    const admin = accounts[1];
     const alice = accounts[5];
     const bob = accounts[6];
 
     const YakTokenFactory = await ethers.getContractFactory("YakToken");
-    const YakToken = await YakTokenFactory.deploy();
+    const YakToken = await YakTokenFactory.deploy(deployer.address);
 
     const VotingPowerFactory = await ethers.getContractFactory("VotingPower");
     const VotingPowerImp = await VotingPowerFactory.deploy();
@@ -64,6 +65,7 @@ const governanceFixture = deployments.createFixture(async ({deployments, getName
         votingPowerPrism: VotingPowerPrism,
         lockManager: LockManager,
         deployer: deployer,
+        admin: admin,
         alice: alice,
         bob: bob,
         ZERO_ADDRESS: ZERO_ADDRESS
@@ -77,7 +79,7 @@ const airdropFixture = deployments.createFixture(async ({deployments, getNamedAc
     const bob = accounts[6];
 
     const YakTokenFactory = await ethers.getContractFactory("YakToken");
-    const YakToken = await YakTokenFactory.deploy();
+    const YakToken = await YakTokenFactory.deploy(deployer.address);
     const ClaimFactory = await ethers.getContractFactory("Claim");
     const Claim = await ClaimFactory.deploy(YakToken.address, DAYS_TO_CLAIM);
 
@@ -98,7 +100,7 @@ const rewardsFixture = deployments.createFixture(async ({deployments, getNamedAc
     const bob = accounts[6];
 
     const YakTokenFactory = await ethers.getContractFactory("YakToken");
-    const YakToken = await YakTokenFactory.deploy(); // deployer has 10k
+    const YakToken = await YakTokenFactory.deploy(deployer.address); // deployer has 10k
 
     const WavaxTokenFactory = await ethers.getContractFactory("WAVAX");
     const WavaxToken = await WavaxTokenFactory.deploy();
@@ -161,7 +163,7 @@ const liquidityFixture = deployments.createFixture(async ({deployments, getNamed
     const LIQUIDITY_TO_ADD = ethers.utils.parseUnits("100");
 
     const YakTokenFactory = await ethers.getContractFactory("YakToken");
-    const YakToken = await YakTokenFactory.deploy(); // deployer has 10k
+    const YakToken = await YakTokenFactory.deploy(deployer.address); // deployer has 10k
 
     const WavaxTokenFactory = await ethers.getContractFactory("WAVAX");
     const WavaxToken = await WavaxTokenFactory.deploy();

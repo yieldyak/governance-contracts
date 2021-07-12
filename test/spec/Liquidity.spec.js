@@ -65,7 +65,7 @@ describe('Liquidity', () => {
         });
 
         it('allows deposits after VP set', async () => {
-            const YakFormulaFactory = await ethers.getContractFactory("ExampleLPFormula");
+            const YakFormulaFactory = await ethers.getContractFactory("UpgradableFormula");
             const YakFormula = await YakFormulaFactory.deploy(deployer.address, "10000");
             await tokenRegistry.setTokenFormula(pair.address, YakFormula.address);
 
@@ -77,7 +77,7 @@ describe('Liquidity', () => {
         });
 
         it('allows withdraw and deposit after VP upgraded', async () => {
-            const YakFormulaFactory = await ethers.getContractFactory("ExampleLPFormula");
+            const YakFormulaFactory = await ethers.getContractFactory("UpgradableFormula");
             let YakFormula = await YakFormulaFactory.deploy(deployer.address, "10000");
             await tokenRegistry.setTokenFormula(pair.address, YakFormula.address);
 
@@ -102,7 +102,7 @@ describe('Liquidity', () => {
         });
 
         it('allows withdraw after VP removed', async () => {
-            const YakFormulaFactory = await ethers.getContractFactory("ExampleLPFormula");
+            const YakFormulaFactory = await ethers.getContractFactory("UpgradableFormula");
             let YakFormula = await YakFormulaFactory.deploy(deployer.address, "10000");
             await tokenRegistry.setTokenFormula(pair.address, YakFormula.address);
 
@@ -119,7 +119,7 @@ describe('Liquidity', () => {
         });
 
         it('allows emergencyWithdraw after VP removed', async () => {
-            const YakFormulaFactory = await ethers.getContractFactory("ExampleLPFormula");
+            const YakFormulaFactory = await ethers.getContractFactory("UpgradableFormula");
             let YakFormula = await YakFormulaFactory.deploy(deployer.address, "10000");
             await tokenRegistry.setTokenFormula(pair.address, YakFormula.address);
 
@@ -136,7 +136,7 @@ describe('Liquidity', () => {
         });
 
         it('does not allow deposit after VP removed', async () => {
-            const YakFormulaFactory = await ethers.getContractFactory("ExampleLPFormula");
+            const YakFormulaFactory = await ethers.getContractFactory("UpgradableFormula");
             let YakFormula = await YakFormulaFactory.deploy(deployer.address, "10000");
             await tokenRegistry.setTokenFormula(pair.address, YakFormula.address);
             await tokenRegistry.removeToken(pair.address);
@@ -151,7 +151,7 @@ describe('Liquidity', () => {
         });
 
         it('does not allow withdraw after LM removed', async () => {
-            const YakFormulaFactory = await ethers.getContractFactory("ExampleLPFormula");
+            const YakFormulaFactory = await ethers.getContractFactory("UpgradableFormula");
             let YakFormula = await YakFormulaFactory.deploy(deployer.address, "10000");
             await tokenRegistry.setTokenFormula(pair.address, YakFormula.address);
 
@@ -169,7 +169,7 @@ describe('Liquidity', () => {
         });
 
         it('does not allow emergencyWithdraw after LM removed', async () => {
-            const YakFormulaFactory = await ethers.getContractFactory("ExampleLPFormula");
+            const YakFormulaFactory = await ethers.getContractFactory("UpgradableFormula");
             let YakFormula = await YakFormulaFactory.deploy(deployer.address, "10000");
             await tokenRegistry.setTokenFormula(pair.address, YakFormula.address);
 
@@ -187,7 +187,7 @@ describe('Liquidity', () => {
         });
 
         it('does not allow deposit after LM removed', async () => {
-            const YakFormulaFactory = await ethers.getContractFactory("ExampleLPFormula");
+            const YakFormulaFactory = await ethers.getContractFactory("UpgradableFormula");
             let YakFormula = await YakFormulaFactory.deploy(deployer.address, "10000");
             await tokenRegistry.setTokenFormula(pair.address, YakFormula.address);
             await masterYak.setLockManager(ZERO_ADDRESS);
@@ -205,7 +205,7 @@ describe('Liquidity', () => {
     context("MasterYak LP farm", async () => {
 
         beforeEach(async() => {
-            const YakFormulaFactory = await ethers.getContractFactory("ExampleLPFormula");
+            const YakFormulaFactory = await ethers.getContractFactory("UpgradableFormula");
             const YakFormula = await YakFormulaFactory.deploy(deployer.address, "10000");
             await tokenRegistry.setTokenFormula(pair.address, YakFormula.address);
             await masterYak.add("20", pair.address, true, true);
@@ -261,13 +261,12 @@ describe('Liquidity', () => {
     context("MasterYak YRT farm", async () => {
 
         beforeEach(async() => {
-            const YakFormulaFactory = await ethers.getContractFactory("ExampleLPFormula");
+            const YakFormulaFactory = await ethers.getContractFactory("UpgradableFormula");
             const YakFormula = await YakFormulaFactory.deploy(deployer.address, "10000");
             await tokenRegistry.setTokenFormula(pair.address, YakFormula.address);
             await masterYak.add("20", pair.address, true, true);
 
-            const YakFormulaFactory2 = await ethers.getContractFactory("ExampleYRTFormula");
-            const YakFormula2 = await YakFormulaFactory2.deploy(deployer.address, "10000");
+            const YakFormula2 = await YakFormulaFactory.deploy(deployer.address, "10000");
             await tokenRegistry.setTokenFormula(farm.address, YakFormula2.address);
             await masterYak.add("0", farm.address, true, true);
         });
