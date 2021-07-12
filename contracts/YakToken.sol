@@ -49,11 +49,11 @@ contract YakToken {
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
     /**
-     * @notice Create and send entire token supply to msg.sender
+     * @notice Create and send entire token supply to _recipient
      */
-    constructor() {
-        balances[msg.sender] = totalSupply;
-        emit Transfer(address(0), msg.sender, totalSupply);
+    constructor(address _recipient) {
+        balances[_recipient] = totalSupply;
+        emit Transfer(address(0), _recipient, totalSupply);
     }
 
     /**

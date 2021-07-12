@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.7.0;
-pragma experimental ABIEncoderV2;
 
 import "./lib/SafeMath.sol";
 import "./lib/SafeERC20.sol";
@@ -91,7 +90,7 @@ contract Claim {
         uint256 availableToClaim = getTokenGrant(msg.sender);
         require(availableToClaim > 0, "Claim::claim: availableToClaim is 0");
 
-        tokenGrants[msg.sender] = tokenGrants[msg.sender].sub(availableToClaim);
+        tokenGrants[msg.sender] = 0;
         
         token.safeTransfer(msg.sender, availableToClaim);
         emit Claimed(msg.sender, availableToClaim);

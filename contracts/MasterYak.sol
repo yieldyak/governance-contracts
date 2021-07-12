@@ -357,7 +357,7 @@ contract MasterYak is ReentrancyGuard {
         address receiver,
         bool updateRewardsEndTimestamp
     ) external onlyOwner {
-        require(tokens.length == amounts.length, "RM::rescueTokens: not same length");
+        require(tokens.length == amounts.length, "MasterYak::rescueTokens: not same length");
         for (uint i = 0; i < tokens.length; i++) {
             IERC20 token = IERC20(tokens[i]);
             uint256 withdrawalAmount;
@@ -370,8 +370,8 @@ contract MasterYak is ReentrancyGuard {
                     withdrawalAmount = tokenBalance;
                 }
             } else {
-                require(tokenBalance >= amounts[i], "RM::rescueTokens: contract balance too low");
-                require(tokenAllowance >= amounts[i], "RM::rescueTokens: increase token allowance");
+                require(tokenBalance >= amounts[i], "MasterYak::rescueTokens: contract balance too low");
+                require(tokenAllowance >= amounts[i], "MasterYak::rescueTokens: increase token allowance");
                 withdrawalAmount = amounts[i];
             }
             token.safeTransferFrom(address(this), receiver, withdrawalAmount);
@@ -425,7 +425,7 @@ contract MasterYak is ReentrancyGuard {
      * @param newOwner New owner address
      */
     function changeOwner(address newOwner) external onlyOwner {
-        require(newOwner != address(0) && newOwner != address(this), "RM::changeOwner: not valid address");
+        require(newOwner != address(0) && newOwner != address(this), "MasterYak::changeOwner: not valid address");
         emit ChangedOwner(owner, newOwner);
         owner = newOwner;
     }
@@ -449,7 +449,7 @@ contract MasterYak is ReentrancyGuard {
             uint256 pendingRewards = user.amount.mul(pool.accRewardsPerShare).div(1e12).sub(user.rewardTokenDebt);
 
             if (pendingRewards > 0) {
-                _distributeRewards(msg.sender, pendingRewards);
+                _safeRewardsTransfer(msg.sender, pendingRewards);
             }
         }
        
@@ -478,7 +478,7 @@ contract MasterYak is ReentrancyGuard {
         PoolInfo storage pool, 
         UserInfo storage user
     ) internal {
-        require(user.amount >= amount, "RM::_withdraw: amount > user balance");
+        require(user.amount >= amount, "MasterYak::_withdraw: amount > user balance");
 
         updatePool(pid);
 
@@ -487,7 +487,7 @@ contract MasterYak is ReentrancyGuard {
         user.rewardTokenDebt = user.amount.mul(pool.accRewardsPerShare).div(1e12);
 
         if (pendingRewards > 0) {
-            _distributeRewards(msg.sender, pendingRewards);
+            _safeRewardsTransfer(msg.sender, pendingRewards);
         }
         
         if (pool.vpForDeposit) {
@@ -498,19 +498,6 @@ contract MasterYak is ReentrancyGuard {
         pool.token.safeTransfer(msg.sender, amount);
 
         emit Withdraw(msg.sender, pid, amount);
-    }
-
-    /**
-     * @notice Internal function used to distribute rewards, optionally vesting a %
-     * @param account account that is due rewards
-     * @param amount amount of rewards to distribute
-     */
-    function _distributeRewards(
-        address account, 
-        uint256 amount
-    ) internal {
-        uint256 rewardAmount = amount > rewardToken.balanceOf(address(this)) ? rewardToken.balanceOf(address(this)) : amount;
-        _safeRewardsTransfer(account, rewardAmount);
     }
 
     /**

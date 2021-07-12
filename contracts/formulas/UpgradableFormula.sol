@@ -5,10 +5,10 @@ import "../lib/SafeMath.sol";
 import "../lib/VotingPowerFormula.sol";
 
 /**
- * @title ExampleYRTFormula
- * @dev Convert YRT tokens to voting power
+ * @title UpgradableFormula
+ * @dev Convert tokens to voting power
  */
-contract ExampleYRTFormula is VotingPowerFormula {
+contract UpgradableFormula is VotingPowerFormula {
     using SafeMath for uint256;
 
     /// @notice Current owner of this contract

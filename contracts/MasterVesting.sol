@@ -4,7 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "./interfaces/ILockManager.sol";
 import "./interfaces/IYakToken.sol";
-import "./interfaces/IERC20.sol";
+import "./lib/SafeERC20.sol";
 import "./interfaces/IVotingPower.sol";
 import "./interfaces/IMasterYak.sol";
 import "./lib/SafeMath.sol";
@@ -15,6 +15,7 @@ import "./lib/SafeMath.sol";
  */
 contract MasterVesting {
     using SafeMath for uint256;
+    using SafeERC20 for IERC20;
 
     /// @notice Grant definition
     struct Grant {
@@ -50,6 +51,9 @@ contract MasterVesting {
     
     /// @notice Event emitted when tokens are claimed by a recipient from a grant
     event GrantTokensClaimed(address indexed recipient, uint256 indexed amountClaimed);
+
+    /// @notice Event emitted when tokens are recovered by owner
+    event Recovered(address token, uint256 amount);
     
     /// @notice Event emitted when the owner of the vesting contract is updated
     event ChangedOwner(address indexed oldOwner, address indexed newOwner);
@@ -215,6 +219,18 @@ contract MasterVesting {
         require(msg.sender == owner, "Vest::setLockManager: not owner");
         emit ChangedAddress("LOCK_MANAGER", address(lockManager), newAddress);
         lockManager = ILockManager(newAddress);
+    }
+
+    /**
+     * @notice Recover ERC20 from contract
+     * @param tokenAddress token address
+     * @param tokenAmount amount to recover
+     */
+    function recoverERC20(address tokenAddress, uint256 tokenAmount) external {
+        require(msg.sender == owner, "Vest::recoverERC20: not owner");
+        require(tokenAmount > 0, "Vest::recoverERC20: amount is 0");
+        IERC20(tokenAddress).safeTransfer(owner, tokenAmount);
+        emit Recovered(tokenAddress, tokenAmount);
     }
 
     /**
