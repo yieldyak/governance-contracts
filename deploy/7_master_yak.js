@@ -2,9 +2,9 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments }) {
     const { deploy, execute, read, log } = deployments;
     const namedAccounts = await getNamedAccounts();
     const { deployer } = namedAccounts;
-    const WAVAX_REWARDS_PER_SECOND = process.env.WAVAX_REWARDS_PER_SECOND
-    const WAVAX_REWARDS_START_TIMESTAMP = process.env.WAVAX_REWARDS_START_TIMESTAMP
-    const WAVAX_ADDRESS = process.env.WAVAX_ADDRESS
+    const INITIAL_AVAX_REWARDS_BALANCE = process.env.INITIAL_AVAX_REWARDS_BALANCE
+    const AVAX_REWARDS_PER_SECOND = process.env.AVAX_REWARDS_PER_SECOND
+    const AVAX_REWARDS_START_TIMESTAMP = process.env.AVAX_REWARDS_START_TIMESTAMP
     const MASTER_YAK_ALLOC_POINTS = process.env.MASTER_YAK_ALLOC_POINTS
     const lockManager = await deployments.get("LockManager")
     const yakToken = await deployments.get("YakToken")
@@ -15,7 +15,7 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments }) {
         from: deployer,
         contract: "MasterYak",
         gas: 4000000,
-        args: [deployer, lockManager.address, WAVAX_ADDRESS, WAVAX_REWARDS_START_TIMESTAMP, WAVAX_REWARDS_PER_SECOND],
+        args: [deployer, lockManager.address, AVAX_REWARDS_START_TIMESTAMP, AVAX_REWARDS_PER_SECOND],
         skipIfAlreadyDeployed: true
     });
 
@@ -28,6 +28,11 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments }) {
         await execute('MasterYak', { from: deployer }, 'add', MASTER_YAK_ALLOC_POINTS, yakToken.address, false, true);
         let numPools = await read('MasterYak', 'poolLength');
         log(`- Create YAK pool, PID ${numPools-1}`);
+
+        await execute('MasterYak', { from: deployer, value: INITIAL_AVAX_REWARDS_BALANCE }, 'addRewardsBalance');
+        let rewardsPerSecond = await read('MasterYak', 'rewardsPerSecond');
+        log(`- Rewards per Second ${ethers.utils.formatUnits(rewardsPerSecond)}`);
+
         log(`Deployer Balance: ${ethers.utils.formatUnits(await ethers.provider.getBalance(deployer))} AVAX`);
     } else {
         log(`- Deployment skipped, using previous deployment at: ${deployResult.address}`)

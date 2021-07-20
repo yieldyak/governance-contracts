@@ -17,15 +17,14 @@ interface IMasterYak {
         uint256 rewardTokenDebt;
     }
 
-    function rewardToken() external view returns (address);
     function lockManager() external view returns (address);
-    function rewardTokensPerSecond() external view returns (uint256);
+    function rewardsPerSecond() external view returns (uint256);
     function poolInfo(uint256 pid) external view returns (PoolInfo memory);
     function userInfo(uint256 pid, address user) external view returns (UserInfo memory);
+    function pendingRewards(uint256 pid, address user) external view returns (uint256);
     function totalAllocPoint() external view returns (uint256);
     function startTimestamp() external view returns (uint256);
     function endTimestamp() external view returns (uint256);
     function deposit(uint256 pid, uint256 amount) external;
     function withdraw(uint256 pid, uint256 amount) external;
-
 }

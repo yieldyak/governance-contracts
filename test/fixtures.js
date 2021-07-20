@@ -7,9 +7,9 @@ const ABI_PANGOLIN_ROUTER = require("../abis/IPangolinRouter");
 const ABI_PANGOLIN_FACTORY = require("../abis/IPangolinFactory");
 const ABI_PANGOLIN_PAIR = require("../abis/IPangolinPair");
 
-const INITIAL_WAVAX_REWARDS_BALANCE = process.env.INITIAL_WAVAX_REWARDS_BALANCE
-const WAVAX_REWARDS_START_TIMESTAMP = process.env.WAVAX_REWARDS_START_TIMESTAMP
-const WAVAX_REWARDS_PER_SECOND = process.env.WAVAX_REWARDS_PER_SECOND
+const INITIAL_AVAX_REWARDS_BALANCE = process.env.INITIAL_AVAX_REWARDS_BALANCE
+const AVAX_REWARDS_START_TIMESTAMP = process.env.AVAX_REWARDS_START_TIMESTAMP
+const AVAX_REWARDS_PER_SECOND = process.env.AVAX_REWARDS_PER_SECOND
 const DAYS_TO_CLAIM = process.env.DAYS_TO_CLAIM
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 
@@ -104,7 +104,6 @@ const rewardsFixture = deployments.createFixture(async ({deployments, getNamedAc
 
     const WavaxTokenFactory = await ethers.getContractFactory("WAVAX");
     const WavaxToken = await WavaxTokenFactory.deploy();
-    await WavaxToken.deposit({ value: INITIAL_WAVAX_REWARDS_BALANCE });
 
     await YakToken.transfer(alice.address, ethers.utils.parseUnits("100"))
     await YakToken.transfer(bob.address, ethers.utils.parseUnits("100"))
@@ -131,14 +130,12 @@ const rewardsFixture = deployments.createFixture(async ({deployments, getNamedAc
     await VotingPower.setLockManager(LockManager.address);
     
     const MasterYakFactory = await ethers.getContractFactory("MasterYak");
-    const MasterYak = await MasterYakFactory.deploy(deployer.address, LockManager.address, WavaxToken.address, WAVAX_REWARDS_START_TIMESTAMP, WAVAX_REWARDS_PER_SECOND)
+    const MasterYak = await MasterYakFactory.deploy(deployer.address, LockManager.address, AVAX_REWARDS_START_TIMESTAMP, AVAX_REWARDS_PER_SECOND)
     await LockManager.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("LOCKER_ROLE")), MasterYak.address)
 
     const MasterVestingFactory = await ethers.getContractFactory("MasterVesting");
     const MasterVesting = await MasterVestingFactory.deploy(YakToken.address, MasterYak.address, "0", LockManager.address);
     await LockManager.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("LOCKER_ROLE")), MasterVesting.address)
-
-    await WavaxToken.approve(MasterYak.address, INITIAL_WAVAX_REWARDS_BALANCE);
 
     return {
         yakToken: YakToken,
@@ -167,7 +164,6 @@ const liquidityFixture = deployments.createFixture(async ({deployments, getNamed
 
     const WavaxTokenFactory = await ethers.getContractFactory("WAVAX");
     const WavaxToken = await WavaxTokenFactory.deploy();
-    await WavaxToken.deposit({ value: INITIAL_WAVAX_REWARDS_BALANCE });
     await WavaxToken.deposit({ value: LIQUIDITY_TO_ADD });
 
     await YakToken.transfer(alice.address, ethers.utils.parseUnits("100"))
@@ -195,15 +191,15 @@ const liquidityFixture = deployments.createFixture(async ({deployments, getNamed
     await VotingPower.setLockManager(LockManager.address);
     
     const MasterYakFactory = await ethers.getContractFactory("MasterYak");
-    const MasterYak = await MasterYakFactory.deploy(deployer.address, LockManager.address, WavaxToken.address, WAVAX_REWARDS_START_TIMESTAMP, WAVAX_REWARDS_PER_SECOND)
+    const MasterYak = await MasterYakFactory.deploy(deployer.address, LockManager.address, AVAX_REWARDS_START_TIMESTAMP, AVAX_REWARDS_PER_SECOND)
     await LockManager.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("LOCKER_ROLE")), MasterYak.address)
 
     const MasterVestingFactory = await ethers.getContractFactory("MasterVesting");
     const MasterVesting = await MasterVestingFactory.deploy(YakToken.address, MasterYak.address, "0", LockManager.address);
     await LockManager.grantRole(ethers.utils.keccak256(ethers.utils.toUtf8Bytes("LOCKER_ROLE")), MasterVesting.address)
 
-    await WavaxToken.approve(MasterYak.address, INITIAL_WAVAX_REWARDS_BALANCE);
-    await MasterYak.addRewardsBalance(INITIAL_WAVAX_REWARDS_BALANCE);
+    // await WavaxToken.approve(MasterYak.address, INITIAL_AVAX_REWARDS_BALANCE);
+    await MasterYak.addRewardsBalance({ value: INITIAL_AVAX_REWARDS_BALANCE });
     await MasterYak.add("10", YakToken.address, true, true);
 
     const PangolinRouter = new Contract(ADDRESS_PANGOLIN, ABI_PANGOLIN_ROUTER, deployer);

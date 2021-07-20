@@ -312,8 +312,7 @@ abstract contract YakStrategy is YakERC20, Ownable {
 // File contracts/interfaces/IYakChef.sol
 
 interface IYakChef {
-    function rewardToken() external view returns (address);
-    function rewardTokensPerSecond() external view returns (uint256);
+    function rewardsPerSecond() external view returns (uint256);
     function totalAllocPoint() external view returns (uint256);
     function startTimestamp() external view returns (uint256);
     function endTimestamp() external view returns (uint256);
@@ -322,7 +321,7 @@ interface IYakChef {
     function add(uint256 allocPoint, address token, bool withUpdate, bool vpForDeposit) external;
     function set(uint256 pid, uint256 allocPoint, bool withUpdate) external;
     function getMultiplier(uint256 from, uint256 to) external view returns (uint256);
-    function pendingRewardTokens(uint256 _pid, address _user) external view returns (uint256);
+    function pendingRewards(uint256 _pid, address _user) external view returns (uint256);
     function massUpdatePools() external;
     function updatePool(uint256 _pid) external;
     function deposit(uint256 _pid, uint256 _amount) external;
@@ -355,6 +354,15 @@ interface IPair is IERC20 {
 }
 
 
+interface IWAVAX {
+    function deposit() external payable;
+    function transfer(address to, uint value) external returns (bool);
+    function balanceOf(address owner) external view returns (uint); 
+    function withdraw(uint) external;
+    function approve(address to, uint value) external returns (bool);
+}
+
+
 // File contracts/strategies/MasterYakStrategy.sol
 
 
@@ -367,6 +375,7 @@ interface IPair is IERC20 {
 contract MasterYakStrategy is YakStrategy {
     using SafeMath for uint;
 
+    IWAVAX private WAVAX;
     IYakChef public stakingContract;
     IPair private swapPairToken0;
     IPair private swapPairToken1;
@@ -394,6 +403,8 @@ contract MasterYakStrategy is YakStrategy {
 
         emit Reinvest(0, 0);
     }
+
+    receive() external payable {}
 
     function setAllowances() public override onlyOwner {
         depositToken.approve(address(stakingContract), MAX_UINT);
@@ -438,6 +449,7 @@ contract MasterYakStrategy is YakStrategy {
      */
     function _reinvest(uint amount) private {
         stakingContract.deposit(PID, 0);
+        IWAVAX(address(rewardToken)).deposit{value: amount}();
         
         uint depositTokenAmount = _convertRewardTokensToDepositTokens(
             amount
@@ -571,8 +583,8 @@ contract MasterYakStrategy is YakStrategy {
     }
 
     function checkReward() public override view returns (uint) {
-        uint pendingReward = stakingContract.pendingRewardTokens(PID, address(this));
-        uint contractBalance = rewardToken.balanceOf(address(this));
+        uint pendingReward = stakingContract.pendingRewards(PID, address(this));
+        uint contractBalance = address(this).balance;
         return pendingReward.add(contractBalance);
     }
 }

@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 const { rewardsFixture } = require("../fixtures")
 
 const MASTER_YAK_ALLOC_POINTS = process.env.MASTER_YAK_ALLOC_POINTS
-const INITIAL_WAVAX_REWARDS_BALANCE = process.env.INITIAL_WAVAX_REWARDS_BALANCE
+const INITIAL_AVAX_REWARDS_BALANCE = process.env.INITIAL_AVAX_REWARDS_BALANCE
 
 describe("MasterVesting", function() {
     let yakToken
@@ -29,7 +29,7 @@ describe("MasterVesting", function() {
         alice = fix.alice
         bob = fix.bob
         ZERO_ADDRESS = fix.ZERO_ADDRESS
-        await masterYak.addRewardsBalance(INITIAL_WAVAX_REWARDS_BALANCE)
+        await masterYak.addRewardsBalance({ value: INITIAL_AVAX_REWARDS_BALANCE})
         await masterYak.add(MASTER_YAK_ALLOC_POINTS, yakToken.address, false, true)
         expect(await masterYak.rewardsActive()).to.eq(true)
     })
@@ -255,19 +255,22 @@ describe("MasterVesting", function() {
         let grantAmount = ethers.utils.parseUnits("1500")
         await masterVesting.addTokenGrant(grantAmount, VESTING_DURATION_IN_DAYS);
         let yakTokenBalanceBefore = await yakToken.balanceOf(deployer.address);
-        let wavaxDeployerBalanceBefore = await wavaxToken.balanceOf(deployer.address);
-        let wavaxContractBalanceBefore = await wavaxToken.balanceOf(masterVesting.address);
+        let avaxDeployerBalanceBefore = await ethers.provider.getBalance(deployer.address);
+        let avaxContractBalanceBefore = await ethers.provider.getBalance(masterYak.address);
         let userVotesBefore = await votingPower.balanceOf(deployer.address)
         const { startTime } = await masterVesting.getTokenGrant();
         let duration = 86400;
         await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(startTime.toString()) + duration]);
-        let rewardsPerSecond = await masterYak.rewardTokensPerSecond();
-        await masterVesting.harvest();
+        let rewardsPerSecond = await masterYak.rewardsPerSecond();
+        const tx = await masterVesting.harvest();
+        const txReceipt = await tx.wait(0);
+        const gasSpent = txReceipt.gasUsed.mul(tx.gasPrice);
+        let expectedRewards = rewardsPerSecond.mul(duration);
         let { rewardTokenDebt } = await masterYak.userInfo("0", masterVesting.address);
-        expect(rewardTokenDebt).to.eq(rewardsPerSecond.mul(duration));
-        expect(await wavaxToken.balanceOf(deployer.address)).to.eq(wavaxDeployerBalanceBefore.add(rewardsPerSecond.mul(duration)));
+        expect(rewardTokenDebt).to.eq(expectedRewards);
+        expect(await ethers.provider.getBalance(deployer.address)).to.eq(avaxDeployerBalanceBefore.add(expectedRewards).sub(gasSpent));
         expect(await yakToken.balanceOf(deployer.address)).to.eq(yakTokenBalanceBefore);
-        expect(await yakToken.balanceOf(masterVesting.address)).to.eq(wavaxContractBalanceBefore);
+        expect(await ethers.provider.getBalance(masterYak.address)).to.eq(avaxContractBalanceBefore.sub(expectedRewards));
         expect(await votingPower.balanceOf(deployer.address)).to.eq(userVotesBefore);
       })
 
@@ -277,8 +280,9 @@ describe("MasterVesting", function() {
         let grantAmount = ethers.utils.parseUnits("1500")
         await masterVesting.addTokenGrant(grantAmount, VESTING_DURATION_IN_DAYS);
         let yakTokenBalanceBefore = await yakToken.balanceOf(deployer.address);
+        let avaxDeployerBalanceBefore = await ethers.provider.getBalance(deployer.address);
         let wavaxDeployerBalanceBefore = await wavaxToken.balanceOf(deployer.address);
-        let wavaxContractBalanceBefore = await wavaxToken.balanceOf(masterVesting.address);
+        let wavaxContractBalanceBefore = await wavaxToken.balanceOf(masterYak.address);
         let userVotesBefore = await votingPower.balanceOf(deployer.address)
         const { startTime } = await masterVesting.getTokenGrant();
         let duration = 86400;
@@ -286,9 +290,10 @@ describe("MasterVesting", function() {
         await expect(masterVesting.connect(bob).harvest()).to.be.revertedWith("revert Vest::harvest: not owner");
         let { rewardTokenDebt } = await masterYak.userInfo("0", masterVesting.address);
         expect(rewardTokenDebt).to.eq(0);
+        expect(await ethers.provider.getBalance(deployer.address)).to.eq(avaxDeployerBalanceBefore);
         expect(await wavaxToken.balanceOf(deployer.address)).to.eq(wavaxDeployerBalanceBefore);
         expect(await yakToken.balanceOf(deployer.address)).to.eq(yakTokenBalanceBefore);
-        expect(await yakToken.balanceOf(masterVesting.address)).to.eq(wavaxContractBalanceBefore);
+        expect(await wavaxToken.balanceOf(masterYak.address)).to.eq(wavaxContractBalanceBefore);
         expect(await votingPower.balanceOf(deployer.address)).to.eq(userVotesBefore);
       })
     })
@@ -343,12 +348,12 @@ describe("MasterVesting", function() {
         await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(startTime.toString()) + VESTING_DURATION_IN_SECS / 52]);
         await masterVesting.claimVestedTokens();
         expect(await yakToken.balanceOf(deployer.address)).to.eq(yakDeployerBalanceBefore.add(grantAmount.div("52")));
-        // TODO: votes
+        expect(await votingPower.balanceOf(deployer.address)).to.eq(userVotesBefore.sub(grantAmount.div("52").mul(1000)));
 
         await ethers.provider.send("evm_setNextBlockTimestamp", [parseInt(startTime.toString()) + VESTING_DURATION_IN_SECS / 26]);
         await masterVesting.claimVestedTokens();
         expect(await yakToken.balanceOf(deployer.address)).to.eq(yakDeployerBalanceBefore.add(grantAmount.div("26")));
-        // TODO: votes
+        expect(await votingPower.balanceOf(deployer.address)).to.eq(userVotesBefore.sub(grantAmount.div("26").mul(1000)));
       })
     })
 

@@ -122,14 +122,15 @@ contract MasterVesting {
         lockManager.grantVotingPower(msg.sender, address(token), amount);
     }
 
+    receive() external payable {}
+
     /**
      * @notice Harvest MasterYak rewards and send entire balance to user
      */
     function harvest() external {
         require(msg.sender == owner, "Vest::harvest: not owner");
         masterYak.deposit(pid, 0);
-        IERC20 rewardToken = IERC20(masterYak.rewardToken());
-        rewardToken.transfer(msg.sender, rewardToken.balanceOf(address(this)));
+        msg.sender.transfer(address(this).balance);
     }
 
     /**

@@ -45,14 +45,11 @@ contract MasterYak is ReentrancyGuard {
         bool vpForDeposit;           // Do users get voting power for deposits of this token?
     }
 
-    /// @notice Reward token
-    IERC20 public rewardToken;
-
     /// @notice LockManager contract
     ILockManager public lockManager;
 
-    /// @notice Reward tokens rewarded per second
-    uint256 public rewardTokensPerSecond;
+    /// @notice Rewards rewarded per second
+    uint256 public rewardsPerSecond;
 
     /// @notice Info of each pool.
     PoolInfo[] public poolInfo;
@@ -94,7 +91,7 @@ contract MasterYak is ReentrancyGuard {
     event ChangedOwner(address indexed oldOwner, address indexed newOwner);
 
     /// @notice Event emitted when the amount of reward tokens per seconds is updated
-    event ChangedRewardTokensPerSecond(uint256 indexed oldRewardTokensPerSecond, uint256 indexed newRewardTokensPerSecond);
+    event ChangedRewardsPerSecond(uint256 indexed oldRewardsPerSecond, uint256 indexed newRewardsPerSecond);
 
     /// @notice Event emitted when the rewards start timestamp is set
     event SetRewardsStartTimestamp(uint256 indexed startTimestamp);
@@ -109,16 +106,14 @@ contract MasterYak is ReentrancyGuard {
      * @notice Create a new Rewards Manager contract
      * @param _owner owner of contract
      * @param _lockManager address of LockManager contract
-     * @param _rewardToken address of token that is being offered as a reward
      * @param _startTimestamp timestamp when rewards will start
-     * @param _rewardTokensPerSecond initial amount of reward tokens to be distributed per second
+     * @param _rewardsPerSecond initial amount of reward tokens to be distributed per second
      */
     constructor(
         address _owner, 
         address _lockManager,
-        address _rewardToken,
         uint256 _startTimestamp,
-        uint256 _rewardTokensPerSecond
+        uint256 _rewardsPerSecond
     ) {
         owner = _owner;
         emit ChangedOwner(address(0), _owner);
@@ -126,15 +121,14 @@ contract MasterYak is ReentrancyGuard {
         lockManager = ILockManager(_lockManager);
         emit ChangedAddress("LOCK_MANAGER", address(0), _lockManager);
 
-        rewardToken = IERC20(_rewardToken);
-        emit ChangedAddress("REWARD_TOKEN", address(0), _rewardToken);
-
         startTimestamp = _startTimestamp == 0 ? block.timestamp : _startTimestamp;
         emit SetRewardsStartTimestamp(startTimestamp);
 
-        rewardTokensPerSecond = _rewardTokensPerSecond;
-        emit ChangedRewardTokensPerSecond(0, _rewardTokensPerSecond);
+        rewardsPerSecond = _rewardsPerSecond;
+        emit ChangedRewardsPerSecond(0, _rewardsPerSecond);
     }
+
+    receive() external payable {}
 
     /**
      * @notice View function to see current poolInfo array length
@@ -216,19 +210,19 @@ contract MasterYak is ReentrancyGuard {
     }
 
     /**
-     * @notice View function to see pending reward tokens on frontend.
+     * @notice View function to see pending rewards on frontend.
      * @param pid pool id
      * @param account user account to check
      * @return pending rewards
      */
-    function pendingRewardTokens(uint256 pid, address account) external view returns (uint256) {
+    function pendingRewards(uint256 pid, address account) external view returns (uint256) {
         PoolInfo storage pool = poolInfo[pid];
         UserInfo storage user = userInfo[pid][account];
         uint256 accRewardsPerShare = pool.accRewardsPerShare;
         uint256 tokenSupply = pool.totalStaked;
         if (block.timestamp > pool.lastRewardTimestamp && tokenSupply != 0) {
             uint256 multiplier = getMultiplier(pool.lastRewardTimestamp, block.timestamp);
-            uint256 totalReward = multiplier.mul(rewardTokensPerSecond).mul(pool.allocPoint).div(totalAllocPoint);
+            uint256 totalReward = multiplier.mul(rewardsPerSecond).mul(pool.allocPoint).div(totalAllocPoint);
             accRewardsPerShare = accRewardsPerShare.add(totalReward.mul(1e12).div(tokenSupply));
         }
 
@@ -267,7 +261,7 @@ contract MasterYak is ReentrancyGuard {
             return;
         }
         uint256 multiplier = getMultiplier(pool.lastRewardTimestamp, block.timestamp);
-        uint256 totalReward = multiplier.mul(rewardTokensPerSecond).mul(pool.allocPoint).div(totalAllocPoint);
+        uint256 totalReward = multiplier.mul(rewardsPerSecond).mul(pool.allocPoint).div(totalAllocPoint);
         pool.accRewardsPerShare = pool.accRewardsPerShare.add(totalReward.mul(1e12).div(tokenSupply));
         pool.lastRewardTimestamp = block.timestamp;
     }
@@ -344,52 +338,13 @@ contract MasterYak is ReentrancyGuard {
     }
 
     /**
-     * @notice Rescue (withdraw) tokens from the smart contract
-     * @dev Can only be called by the owner
-     * @param tokens the tokens to withdraw
-     * @param amounts the amount of each token to withdraw.  If zero, withdraws the maximum allowed amount for each token
-     * @param receiver the address that will receive the tokens
-     * @param updateRewardsEndTimestamp if true, update the rewards end timestamp after performing transfers
-     */
-    function rescueTokens(
-        address[] calldata tokens, 
-        uint256[] calldata amounts, 
-        address receiver,
-        bool updateRewardsEndTimestamp
-    ) external onlyOwner {
-        require(tokens.length == amounts.length, "MasterYak::rescueTokens: not same length");
-        for (uint i = 0; i < tokens.length; i++) {
-            IERC20 token = IERC20(tokens[i]);
-            uint256 withdrawalAmount;
-            uint256 tokenBalance = token.balanceOf(address(this));
-            uint256 tokenAllowance = token.allowance(address(this), receiver);
-            if (amounts[i] == 0) {
-                if (tokenBalance > tokenAllowance) {
-                    withdrawalAmount = tokenAllowance;
-                } else {
-                    withdrawalAmount = tokenBalance;
-                }
-            } else {
-                require(tokenBalance >= amounts[i], "MasterYak::rescueTokens: contract balance too low");
-                require(tokenAllowance >= amounts[i], "MasterYak::rescueTokens: increase token allowance");
-                withdrawalAmount = amounts[i];
-            }
-            token.safeTransferFrom(address(this), receiver, withdrawalAmount);
-        }
-
-        if (updateRewardsEndTimestamp) {
-            _setRewardsEndTimestamp();
-        }
-    }
-
-    /**
      * @notice Set new rewards per second
      * @dev Can only be called by the owner
-     * @param newRewardTokensPerSecond new amount of reward token to reward each second
+     * @param newRewardsPerSecond new amount of rewards to reward each second
      */
-    function setRewardsPerSecond(uint256 newRewardTokensPerSecond) external onlyOwner {
-        emit ChangedRewardTokensPerSecond(rewardTokensPerSecond, newRewardTokensPerSecond);
-        rewardTokensPerSecond = newRewardTokensPerSecond;
+    function setRewardsPerSecond(uint256 newRewardsPerSecond) external onlyOwner {
+        emit ChangedRewardsPerSecond(rewardsPerSecond, newRewardsPerSecond);
+        rewardsPerSecond = newRewardsPerSecond;
         _setRewardsEndTimestamp();
     }
         
@@ -405,17 +360,8 @@ contract MasterYak is ReentrancyGuard {
     /**
      * @notice Add rewards to contract
      * @dev Can only be called by the owner
-     * @param amount amount of tokens to add
      */
-    function addRewardsBalance(uint256 amount) external onlyOwner {
-        rewardToken.safeTransferFrom(msg.sender, address(this), amount);
-        _setRewardsEndTimestamp();
-    }
-
-    /**
-     * @notice Reset rewards end timestamp manually based on new balances
-     */
-    function resetRewardsEndTimestamp() external onlyOwner {
+    function addRewardsBalance() external payable onlyOwner {
         _setRewardsEndTimestamp();
     }
 
@@ -446,10 +392,10 @@ contract MasterYak is ReentrancyGuard {
         updatePool(pid);
 
         if (user.amount > 0) {
-            uint256 pendingRewards = user.amount.mul(pool.accRewardsPerShare).div(1e12).sub(user.rewardTokenDebt);
+            uint256 pendingRewardAmount = user.amount.mul(pool.accRewardsPerShare).div(1e12).sub(user.rewardTokenDebt);
 
-            if (pendingRewards > 0) {
-                _safeRewardsTransfer(msg.sender, pendingRewards);
+            if (pendingRewardAmount > 0) {
+                _safeRewardsTransfer(msg.sender, pendingRewardAmount);
             }
         }
        
@@ -482,12 +428,12 @@ contract MasterYak is ReentrancyGuard {
 
         updatePool(pid);
 
-        uint256 pendingRewards = user.amount.mul(pool.accRewardsPerShare).div(1e12).sub(user.rewardTokenDebt);
+        uint256 pendingRewardAmount = user.amount.mul(pool.accRewardsPerShare).div(1e12).sub(user.rewardTokenDebt);
         user.amount = user.amount.sub(amount);
         user.rewardTokenDebt = user.amount.mul(pool.accRewardsPerShare).div(1e12);
 
-        if (pendingRewards > 0) {
-            _safeRewardsTransfer(msg.sender, pendingRewards);
+        if (pendingRewardAmount > 0) {
+            _safeRewardsTransfer(msg.sender, pendingRewardAmount);
         }
         
         if (pool.vpForDeposit) {
@@ -505,22 +451,22 @@ contract MasterYak is ReentrancyGuard {
      * @param to account that is receiving rewards
      * @param amount amount of rewards to send
      */
-    function _safeRewardsTransfer(address to, uint256 amount) internal {
-        uint256 rewardTokenBalance = rewardToken.balanceOf(address(this));
+    function _safeRewardsTransfer(address payable to, uint256 amount) internal {
+        uint256 rewardTokenBalance = address(this).balance;
         if (amount > rewardTokenBalance) {
-            rewardToken.safeTransfer(to, rewardTokenBalance);
+            to.transfer(rewardTokenBalance);
         } else {
-            rewardToken.safeTransfer(to, amount);
+            to.transfer(amount);
         }
     }
 
     /**
-     * @notice Internal function that updates rewards end timestamp based on tokens per second and the token balance of the contract
+     * @notice Internal function that updates rewards end timestamp based on rewards per second and the balance of the contract
      */
     function _setRewardsEndTimestamp() internal {
-        if(rewardTokensPerSecond > 0) {
+        if(rewardsPerSecond > 0) {
             uint256 rewardFromTimestamp = block.timestamp >= startTimestamp ? block.timestamp : startTimestamp;
-            uint256 newEndTimestamp = rewardFromTimestamp.add(rewardToken.balanceOf(address(this)).div(rewardTokensPerSecond));
+            uint256 newEndTimestamp = rewardFromTimestamp.add(address(this).balance.div(rewardsPerSecond));
             if(newEndTimestamp > rewardFromTimestamp && newEndTimestamp != endTimestamp) {
                 emit ChangedRewardsEndTimestamp(endTimestamp, newEndTimestamp);
                 endTimestamp = newEndTimestamp;
