@@ -1,14 +1,11 @@
-# $YAK
-
-The YAK token has not been deployed.
-
-## Token Description
+# YAK
 
 YAK is an ERC-20 compliant token. The contract logic is immutable and includes no ability to mint tokens, burn tokens or otherwise change supply.
 
 * Name: `YAK Token`
 * Symbol: `YAK`
 * Decimals: `18`
+* Address: `0x59414b3089ce2AF0010e7523Dea7E2b35d776ec7`
 * Total supply: `10,000 YAK`
 
 ## Token Distribution
