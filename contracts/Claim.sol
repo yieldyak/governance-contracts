@@ -68,6 +68,34 @@ contract Claim {
         tokenGrants[recipient] = tokenGrants[recipient].add(amount);
         emit Added(recipient, amount);
     }
+    
+    /**
+     * @notice Batch add new token grants
+     * @param recipients The addresses that are receiving grants
+     * @param amounts The amounts of tokens being granted
+     * @param totalTokens The total tokens being granted (checksum)
+     */
+    function addTokenGrants(
+        address[] calldata recipients,
+        uint256[] calldata amounts,
+        uint256 totalTokens
+    ) 
+        external
+    {
+        require(block.timestamp < deadline, "Claim::addTokenGrants: too late");
+        require(msg.sender == owner, "Claim::addTokenGrants: not owner");
+        require(recipients.length == amounts.length, "Claim::addTokenGrants: different lengths");
+        
+        token.safeTransferFrom(owner, address(this), totalTokens);
+
+        for (uint256 i = 0; i < recipients.length; i++) {
+            totalTokens = totalTokens.sub(amounts[i]);
+            tokenGrants[recipients[i]] = tokenGrants[recipients[i]].add(amounts[i]);
+            emit Added(recipients[i], amounts[i]);
+        }
+
+        require(totalTokens == 0, "Claim::addTokenGrants: wrong output");
+    }
 
     /**
      * @notice Get token grant for recipient
