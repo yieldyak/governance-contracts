@@ -3,7 +3,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy, log } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  log(`2) Voting Power Prism`)
+  log(`5) Voting Power Prism`)
   // Check whether there are any issues with the voting power prism (selector clashes, etc.)
   const prismValid = await validatePrism()
   if(prismValid) {
@@ -28,5 +28,5 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   }
 };
 
-module.exports.tags = ["2", "VotingPowerPrism"]
-module.exports.dependencies = ["1"]
+module.exports.tags = ["5", "VotingPowerPrism"]
+module.exports.dependencies = ["4"]

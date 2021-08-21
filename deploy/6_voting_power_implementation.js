@@ -2,13 +2,13 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const { deploy, log } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  log(`3) Voting Power Implementation`)
+  log(`6) Voting Power Implementation`)
   // Deploy VotingPower implementation contract
   const deployResult = await deploy("VotingPower", {
     from: deployer,
     contract: "VotingPower",
     gas: 4000000,
-    skipIfAlreadyDeployed: false
+    skipIfAlreadyDeployed: true
   });
 
   if (deployResult.newlyDeployed) {
@@ -25,11 +25,11 @@ module.exports.skip = async function({ deployments }) {
   if(prismValid) {
     return false
   } else {
-    log(`3) Voting Power Implementation`)
+    log(`6) Voting Power Implementation`)
     log(`- Skipping step, Prism has clashes with implementation contract`)
     return true
   }
 }
 
-module.exports.tags = ["3", "VotingPower"]
-module.exports.dependencies = ["2"]
+module.exports.tags = ["6", "VotingPower"]
+module.exports.dependencies = ["5"]

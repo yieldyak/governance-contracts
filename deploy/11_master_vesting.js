@@ -8,7 +8,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   const TEAM_VESTING_TOKENS = ethers.utils.parseUnits("1500");
   const TEAM_VESTING_DAYS = 365;
 
-  log(`9) MasterVesting`)
+  log(`11) MasterVesting`)
   // Deploy MasterVesting contract
   const deployResult = await deploy("MasterVesting", {
     from: deployer,
@@ -43,5 +43,5 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
   }
 };
 
-module.exports.tags = ["10", "MasterVesting"]
-module.exports.dependencies = ["9"]
+module.exports.tags = ["11", "MasterVesting"]
+module.exports.dependencies = ["10"]

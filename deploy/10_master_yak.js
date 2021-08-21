@@ -6,10 +6,12 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments }) {
     const AVAX_REWARDS_PER_SECOND = process.env.AVAX_REWARDS_PER_SECOND
     const AVAX_REWARDS_START_TIMESTAMP = process.env.AVAX_REWARDS_START_TIMESTAMP
     const MASTER_YAK_ALLOC_POINTS = process.env.MASTER_YAK_ALLOC_POINTS
+    const MASTER_YAK_PGL_ALLOC_POINTS = process.env.MASTER_YAK_PGL_ALLOC_POINTS
+    const PGL_YAK_AVAX_ADDRESS = process.env.PGL_YAK_AVAX_ADDRESS;
     const lockManager = await deployments.get("LockManager")
     const yakToken = await deployments.get("YakToken")
 
-    log(`7) MasterYak`)
+    log(`10) MasterYak`)
     // Deploy MasterYak contract
     deployResult = await deploy("MasterYak", {
         from: deployer,
@@ -29,6 +31,10 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments }) {
         let numPools = await read('MasterYak', 'poolLength');
         log(`- Create YAK pool, PID ${numPools-1}`);
 
+        await execute('MasterYak', { from: deployer }, 'add', MASTER_YAK_PGL_ALLOC_POINTS, PGL_YAK_AVAX_ADDRESS, false, true);
+        numPools = await read('MasterYak', 'poolLength');
+        log(`- Create YAK/AVAX pool, PID ${numPools-1}`);
+
         await execute('MasterYak', { from: deployer, value: INITIAL_AVAX_REWARDS_BALANCE }, 'addRewardsBalance');
         let rewardsPerSecond = await read('MasterYak', 'rewardsPerSecond');
         log(`- Rewards per Second ${ethers.utils.formatUnits(rewardsPerSecond)}`);
@@ -39,5 +45,5 @@ module.exports = async function ({ ethers, getNamedAccounts, deployments }) {
     }
 };
 
-module.exports.tags = ["7", "MasterYak"];
-module.exports.dependencies = ["6"]
+module.exports.tags = ["10", "MasterYak"];
+module.exports.dependencies = ["9"]

@@ -6,7 +6,7 @@ module.exports = async function ({ ethers, deployments, getNamedAccounts }) {
     const votingPowerPrism = await deployments.get("VotingPowerPrism");
     const votingPower = new ethers.Contract(votingPowerPrism.address, votingPowerImplementation.abi, deployerSigner)
     const token = await deployments.get("YakToken");
-    log(`4) Initialize Voting Power`)
+    log(`7) Initialize Voting Power`)
 
     // Set pending implementation for voting power prism
     await execute('VotingPowerPrism', {from: deployer }, 'setPendingProxyImplementation', votingPowerImplementation.address);
@@ -41,7 +41,7 @@ module.exports.skip = async function({ ethers, deployments, getNamedAccounts }) 
         try {
             const vpYakToken = await votingPower.yakToken()
             if(token.address != "0x0000000000000000000000000000000000000000" && vpYakToken == token.address) {
-                log(`4) Initialize Voting Power`)
+                log(`7) Initialize Voting Power`)
                 log(`- Skipping step, voting power prism at ${votingPower.address} already initialized`)
                 return true
             } else {
@@ -56,5 +56,5 @@ module.exports.skip = async function({ ethers, deployments, getNamedAccounts }) 
     }
 }
 
-module.exports.tags = ["4", "VotingPowerInit"];
-module.exports.dependencies = ["3"]
+module.exports.tags = ["7", "VotingPowerInit"];
+module.exports.dependencies = ["6"]

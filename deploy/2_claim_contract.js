@@ -5,7 +5,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const DAYS_TO_CLAIM = process.env.DAYS_TO_CLAIM
   
-    log(`8) Claim Contract`)
+    log(`2) Claim Contract`)
     // Deploy Claim contract
     const deployResult = await deploy("Claim", {
       from: deployer,
@@ -28,5 +28,5 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     }
   };
 
-module.exports.tags = ["8", "ClaimContract"]
-module.exports.dependencies = ["7"]
+module.exports.tags = ["2", "ClaimContract"]
+module.exports.dependencies = ["1"]
